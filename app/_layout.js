@@ -11,6 +11,7 @@ const RUTA_POR_ROL = {
   cocinero: '/cocinero',
   encargado: '/encargado',
   admin: '/admin',
+  superadmin: '/superadmin',
 };
 
 const RUTAS_SIN_SESION = ['login', 'registro'];

@@ -30,13 +30,22 @@ function Dato({ etiqueta, valor }) {
 }
 
 export default function Solicitudes() {
-  const { usuario } = useAuth();
+  const { usuario, institucionId, institucion } = useAuth();
   const [solicitudes, setSolicitudes] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const consulta = query(collection(db, 'usuarios'), where('estado', '==', 'pendiente'));
+    if (!institucionId) {
+      setSolicitudes([]);
+      return undefined;
+    }
+
+    const consulta = query(
+      collection(db, 'usuarios'),
+      where('institucionId', '==', institucionId),
+      where('estado', '==', 'pendiente')
+    );
 
     return onSnapshot(
       consulta,
@@ -51,7 +60,7 @@ export default function Solicitudes() {
         setError('No se pudo cargar la lista de registros pendientes.');
       }
     );
-  }, []);
+  }, [institucionId]);
 
   async function resolver(solicitud, estado) {
     setProcesando(solicitud.id);
@@ -76,8 +85,14 @@ export default function Solicitudes() {
 
     let duplicado;
     try {
+      // La cédula se controla dentro de la institución: la misma persona puede
+      // existir en otra sin que eso sea un conflicto.
       const mismaCedula = await getDocs(
-        query(collection(db, 'usuarios'), where('ci', '==', solicitud.ci))
+        query(
+          collection(db, 'usuarios'),
+          where('institucionId', '==', institucionId),
+          where('ci', '==', solicitud.ci)
+        )
       );
       duplicado = mismaCedula.docs.find(
         (registro) => registro.id !== solicitud.id && registro.data().estado === 'activo'
@@ -129,12 +144,20 @@ export default function Solicitudes() {
     <Pantalla scroll={false}>
       <Encabezado
         titulo="Registros pendientes"
-        subtitulo={
+        subtitulo={institucion?.nombre}
+        nota={
           solicitudes.length === 1
             ? '1 registro esperando aprobación'
             : `${solicitudes.length} registros esperando aprobación`
         }
       />
+
+      {!institucionId ? (
+        <Aviso tipo="error" titulo="Sin institución asignada">
+          Tu usuario no tiene una institución asignada. Hay que ejecutar el script asignar-rol.js
+          indicando a qué institución pertenece.
+        </Aviso>
+      ) : null}
 
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
 
@@ -145,9 +168,11 @@ export default function Solicitudes() {
         contentContainerStyle={estilos.lista}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Aviso tipo="info" titulo="Todo al día">
-            No hay registros esperando aprobación.
-          </Aviso>
+          institucionId ? (
+            <Aviso tipo="info" titulo="Todo al día">
+              No hay registros esperando aprobación.
+            </Aviso>
+          ) : null
         }
         renderItem={({ item }) => (
           <View style={estilos.tarjeta}>

@@ -7,7 +7,7 @@ const MENSAJES = {
     tipo: 'info',
     titulo: 'Registro enviado',
     texto:
-      'Tu registro fue enviado correctamente. Un administrador lo va a revisar y, una vez aprobado, esta pantalla se actualiza sola.',
+      'Tu registro fue enviado correctamente. El encargado de tu institución lo va a revisar y, una vez aprobado, esta pantalla se actualiza sola.',
   },
   rechazado: {
     tipo: 'error',
@@ -22,7 +22,7 @@ const MENSAJES = {
 };
 
 export default function Pendiente() {
-  const { perfil, estado, cerrarSesion } = useAuth();
+  const { perfil, institucion, estado, cerrarSesion } = useAuth();
   const mensaje = MENSAJES[estado] ?? MENSAJES.pendiente;
 
   return (
@@ -30,6 +30,7 @@ export default function Pendiente() {
       <View style={{ gap: 8 }}>
         <Titulo>Mi Bandeja</Titulo>
         {perfil ? <Subtitulo>{`${perfil.nombre} ${perfil.apellido}`}</Subtitulo> : null}
+        {institucion ? <Subtitulo>{institucion.nombre}</Subtitulo> : null}
       </View>
 
       <Aviso tipo={mensaje.tipo} titulo={mensaje.titulo}>

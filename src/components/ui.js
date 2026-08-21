@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colores, espaciado, radio, tipografia } from '../theme';
 
-export function Pantalla({ children, scroll = true, contentContainerStyle }) {
+export function Pantalla({ children, scroll = true, contentContainerStyle, bordes = ['top', 'bottom'] }) {
   const contenido = scroll ? (
     <ScrollView
       contentContainerStyle={[estilos.scroll, contentContainerStyle]}
@@ -26,7 +26,7 @@ export function Pantalla({ children, scroll = true, contentContainerStyle }) {
   );
 
   return (
-    <SafeAreaView style={estilos.pantalla} edges={['top', 'bottom']}>
+    <SafeAreaView style={estilos.pantalla} edges={bordes}>
       <KeyboardAvoidingView
         style={estilos.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -96,6 +96,21 @@ export function Aviso({ tipo = 'info', titulo, children }) {
   );
 }
 
+export function Opcion({ titulo, detalle, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [estilos.opcion, pressed && estilos.opcionPresionada]}
+    >
+      <View style={estilos.opcionTextos}>
+        <Text style={estilos.opcionTitulo}>{titulo}</Text>
+        {detalle ? <Text style={estilos.opcionDetalle}>{detalle}</Text> : null}
+      </View>
+      <Text style={estilos.opcionFlecha}>›</Text>
+    </Pressable>
+  );
+}
+
 export function Cargando({ texto }) {
   return (
     <View style={estilos.cargando}>
@@ -157,6 +172,24 @@ const estilos = StyleSheet.create({
   avisoTexto_error: { color: colores.error },
   avisoTexto_exito: { color: colores.exito },
   avisoTexto_advertencia: { color: colores.advertencia },
+
+  opcion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: espaciado.md,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.md,
+    paddingHorizontal: espaciado.md,
+    paddingVertical: espaciado.md,
+  },
+  opcionPresionada: { backgroundColor: '#eef2f7' },
+  opcionTextos: { flex: 1, gap: 2 },
+  opcionTitulo: { fontSize: tipografia.cuerpo, fontWeight: '600', color: colores.texto },
+  opcionDetalle: { fontSize: tipografia.nota, color: colores.textoSuave },
+  opcionFlecha: { fontSize: 22, color: colores.textoSuave },
 
   cargando: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: espaciado.md },
   cargandoTexto: { fontSize: tipografia.nota + 1, color: colores.textoSuave },

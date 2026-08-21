@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Reglas del comedor Mi Bandeja.
-// El rol se lee del custom claim del token, nunca del documento del usuario.
+// El rol y la institución del personal se leen de los custom claims del token,
+// nunca del documento del usuario.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,30 +15,53 @@ service cloud.firestore {
       return request.auth.token.rol;
     }
 
-    function esAdmin() {
-      return autenticado() && rol() == 'admin';
+    function institucionDelClaim() {
+      return request.auth.token.institucionId;
     }
 
-    function esEncargado() {
-      return autenticado() && rol() == 'encargado';
+    function esSuperadmin() {
+      return autenticado() && rol() == 'superadmin';
+    }
+
+    function esAdminDe(institucionId) {
+      return autenticado() && rol() == 'admin' && institucionDelClaim() == institucionId;
+    }
+
+    function esPersonalDe(institucionId) {
+      return autenticado()
+        && rol() in ['admin', 'encargado']
+        && institucionDelClaim() == institucionId;
     }
 
     function esPropietario(uid) {
       return autenticado() && request.auth.uid == uid;
     }
 
+    // El catálogo se lee sin sesión: la app tiene que mostrarlo antes de que el
+    // alumno tenga cuenta. No contiene datos personales.
+    match /instituciones/{institucionId} {
+      allow read: if true;
+      allow write: if esSuperadmin();
+    }
+
     match /usuarios/{uid} {
       function camposDeRegistro() {
         return [
-          'nombre', 'apellido', 'ci', 'email', 'telefono',
-          'fechaNacimiento', 'rol', 'estado', 'tickets', 'creadoEn'
+          'nombre', 'apellido', 'ci', 'email', 'telefono', 'fechaNacimiento',
+          'institucionId', 'rol', 'estado', 'tickets', 'creadoEn'
         ];
       }
 
-      allow get: if esPropietario(uid) || esEncargado() || esAdmin();
-      allow list: if esEncargado() || esAdmin();
+      function institucionActiva(institucionId) {
+        return exists(/databases/$(database)/documents/instituciones/$(institucionId))
+          && get(/databases/$(database)/documents/instituciones/$(institucionId)).data.activa == true;
+      }
 
-      // Un registro nuevo entra siempre sin rol, sin permisos y sin créditos.
+      allow get: if esPropietario(uid) || esPersonalDe(resource.data.institucionId);
+      allow list: if esPersonalDe(resource.data.institucionId);
+
+      // Un registro nuevo entra siempre sin rol, sin permisos y sin créditos, y
+      // solo contra una institución que existe y está activa.
       allow create: if esPropietario(uid)
         && request.resource.data.keys().hasOnly(camposDeRegistro())
         && request.resource.data.keys().hasAll(camposDeRegistro())
@@ -46,9 +70,14 @@ service cloud.firestore {
         && request.resource.data.tickets == 0
         && request.resource.data.email == request.auth.token.email.lower()
         && request.resource.data.ci is string
-        && request.resource.data.creadoEn == request.time;
+        && request.resource.data.creadoEn == request.time
+        && institucionActiva(request.resource.data.institucionId);
 
-      allow update, delete: if esAdmin();
+      // La institución de un usuario no se cambia desde la administración.
+      allow update: if esAdminDe(resource.data.institucionId)
+        && request.resource.data.institucionId == resource.data.institucionId;
+
+      allow delete: if esAdminDe(resource.data.institucionId);
     }
   }
 }

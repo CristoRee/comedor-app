@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Timestamp, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth, db } from '../src/firebase';
-import { Aviso, Boton, Campo, Pantalla, Subtitulo, Titulo } from '../src/components/ui';
+import { auth, db } from '../../src/firebase';
+import { Aviso, Boton, Campo, Pantalla, Subtitulo, Titulo } from '../../src/components/ui';
 import {
   limpiarNumeros,
   mensajeDeError,
@@ -15,8 +15,8 @@ import {
   validarFechaNacimiento,
   validarNombre,
   validarTelefono,
-} from '../src/validaciones';
-import { colores, espaciado, tipografia } from '../src/theme';
+} from '../../src/validaciones';
+import { colores, espaciado, tipografia } from '../../src/theme';
 
 const CAMPOS_VACIOS = {
   nombre: '',
@@ -29,7 +29,8 @@ const CAMPOS_VACIOS = {
   repetir: '',
 };
 
-export default function Registro() {
+export default function DatosDelRegistro() {
+  const { institucionId, institucionNombre } = useLocalSearchParams();
   const [datos, setDatos] = useState(CAMPOS_VACIOS);
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
@@ -72,6 +73,7 @@ export default function Registro() {
         email: datos.correo.trim().toLowerCase(),
         telefono: limpiarNumeros(datos.telefono),
         fechaNacimiento: Timestamp.fromDate(parsearFecha(datos.fechaNacimiento)),
+        institucionId,
         rol: 'alumno',
         estado: 'pendiente',
         tickets: 0,
@@ -83,12 +85,26 @@ export default function Registro() {
     }
   }
 
+  if (!institucionId) {
+    return (
+      <Pantalla bordes={['bottom']}>
+        <Aviso tipo="error" titulo="Falta la institución">
+          Volvé atrás y elegí tu departamento e institución antes de completar el registro.
+        </Aviso>
+      </Pantalla>
+    );
+  }
+
   return (
-    <Pantalla>
+    <Pantalla bordes={['bottom']}>
       <View style={estilos.encabezado}>
         <Titulo>Crear cuenta</Titulo>
-        <Subtitulo>Un administrador revisa cada registro antes de habilitarlo.</Subtitulo>
+        <Subtitulo>{institucionNombre}</Subtitulo>
       </View>
+
+      <Aviso tipo="info">
+        El encargado de tu institución revisa cada registro antes de habilitarlo.
+      </Aviso>
 
       {errorGeneral ? <Aviso tipo="error">{errorGeneral}</Aviso> : null}
 
