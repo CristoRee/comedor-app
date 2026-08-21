@@ -1,8 +1,3 @@
-// Cliente de Firebase para Mi Bandeja.
-//
-// La apiKey no es un secreto: es un identificador público del proyecto y va
-// incluida en toda app cliente de Firebase. Lo que protege los datos son las
-// reglas de seguridad de Firestore, no ocultar esta clave.
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -17,12 +12,9 @@ const firebaseConfig = {
   appId: '1:334490664016:web:dfb78c7d8433a2c5cea555',
 };
 
-// getApps() evita reinicializar la app en cada Fast Refresh de Metro.
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// En React Native hay que usar initializeAuth con AsyncStorage: con getAuth()
-// a secas la sesión se pierde al cerrar la app. El try/catch cubre el Fast
-// Refresh, que vuelve a ejecutar este módulo sobre un auth ya inicializado.
+// AsyncStorage mantiene la sesión iniciada entre reinicios de la app.
 let authInstance;
 try {
   authInstance = initializeAuth(app, {

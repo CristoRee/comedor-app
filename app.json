@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "comedor-app",
-    "slug": "comedor-app",
+    "name": "Mi Bandeja",
+    "slug": "mi-bandeja",
+    "scheme": "mibandeja",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Reglas del comedor Mi Bandeja.
+// El rol se lee del custom claim del token, nunca del documento del usuario.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function rol() {
+      return request.auth.token.rol;
+    }
+
+    function esAdmin() {
+      return autenticado() && rol() == 'admin';
+    }
+
+    function esEncargado() {
+      return autenticado() && rol() == 'encargado';
+    }
+
+    function esPropietario(uid) {
+      return autenticado() && request.auth.uid == uid;
+    }
+
+    match /usuarios/{uid} {
+      function camposDeRegistro() {
+        return [
+          'nombre', 'apellido', 'ci', 'email', 'telefono',
+          'fechaNacimiento', 'rol', 'estado', 'tickets', 'creadoEn'
+        ];
+      }
+
+      allow get: if esPropietario(uid) || esEncargado() || esAdmin();
+      allow list: if esEncargado() || esAdmin();
+
+      // Un registro nuevo entra siempre sin rol, sin permisos y sin créditos.
+      allow create: if esPropietario(uid)
+        && request.resource.data.keys().hasOnly(camposDeRegistro())
+        && request.resource.data.keys().hasAll(camposDeRegistro())
+        && request.resource.data.rol == 'alumno'
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.tickets == 0
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.ci is string
+        && request.resource.data.creadoEn == request.time;
+
+      allow update, delete: if esAdmin();
+    }
+  }
+}
