@@ -6,12 +6,13 @@ import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { Cargando } from '../src/components/ui';
 import { colores } from '../src/theme';
 
-const RUTA_POR_ROL = {
-  alumno: '/alumno',
-  cocinero: '/cocinero',
-  encargado: '/encargado',
-  admin: '/admin',
-  superadmin: '/superadmin',
+// La primera sección de cada lista es la pantalla de arranque del rol.
+const SECCIONES_POR_ROL = {
+  alumno: ['alumno'],
+  cocinero: ['cocinero', 'comedor'],
+  encargado: ['encargado', 'comedor'],
+  admin: ['admin', 'alumnos', 'comedor'],
+  superadmin: ['superadmin'],
 };
 
 const RUTAS_SIN_SESION = ['login', 'registro'];
@@ -36,8 +37,8 @@ function Guardia({ children }) {
       return;
     }
 
-    const destino = RUTA_POR_ROL[rol];
-    if (seccion !== destino.slice(1)) router.replace(destino);
+    const permitidas = SECCIONES_POR_ROL[rol];
+    if (!permitidas.includes(seccion)) router.replace(`/${permitidas[0]}`);
   }, [cargando, usuario, estado, rol, segmentos, router]);
 
   if (cargando) return <Cargando texto="Cargando tu sesión" />;

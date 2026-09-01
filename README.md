@@ -4,7 +4,8 @@ App de comedores institucionales. Una sola app para todo el país: el alumno eli
 su departamento y su institución al registrarse, y el encargado de esa
 institución aprueba o rechaza el registro.
 
-Estado: **Fase 1 — autenticación, roles y multi-institución** implementada.
+Estado: **loop central completo**. Menú del día, confirmación de asistencia,
+código QR, escaneo en la puerta, descuento de tickets y pantalla de contadores.
 
 ---
 
@@ -36,23 +37,35 @@ Proyecto `comedor-mi-bandeja`. La configuración del cliente está en
 > reglas de seguridad. El archivo que sí es secreto es
 > `scripts/service-account.json`, que está en el `.gitignore` y no se sube nunca.
 
-## Puesta en marcha de una institución
+---
 
-Los scripts necesitan `scripts/service-account.json` (Firebase Console →
-**Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada**).
+## Agregar una institución nueva
 
-**1. Dar de alta la institución.**
+Es un comando. No hay que compilar ni publicar nada: la institución aparece en la
+lista de registro de su departamento en cuanto se crea.
 
 ```bash
-node scripts/crear-institucion.js polo-rivera "Polo Educativo Tecnológico" "Rivera" "Rivera" 11:30
+node scripts/crear-institucion.js <id> "<nombre>" "<departamento>" "<ciudad>" <hh:mm>
 ```
 
-Los argumentos son: id, nombre, departamento, ciudad y hora de apertura del
-comedor. Queda activa, y desde ese momento aparece en la lista de registro de su
-departamento. Para ver las que ya existen: `node scripts/crear-institucion.js --listar`.
+- **id**: corto, en minúsculas y sin espacios (`polo-rivera`, `utu-salto`). Es el
+  que se usa después para asignarle el personal, y no se puede cambiar.
+- **departamento**: exacto, uno de los 19. El script rechaza cualquier otro.
+- **hh:mm**: hora a la que abre el comedor.
 
-El script crea también la configuración operativa completa, con los valores del
-Polo como punto de partida:
+Para ver las que ya existen:
+
+```bash
+node scripts/crear-institucion.js --listar
+```
+
+Para desactivar una sin borrarla, entrás a la app como `superadmin`: deja de
+aparecer en el registro, pero las cuentas ya aprobadas siguen funcionando.
+
+### Configuración operativa
+
+El script crea también la configuración completa, con los valores del Polo como
+punto de partida:
 
 ```
 instituciones/{institucionId}
@@ -72,154 +85,191 @@ instituciones/{institucionId}
   contadores: { mostrarDesayuno: true, mostrarChicoGrande: true }
 ```
 
-Ningún horario ni umbral está fijado en el código de la app: todo se lee de acá.
-Una institución que no usa internado pone `subroles.internado.activo: false` y
-esa opción no le aparece a nadie de esa institución.
+Ningún horario ni umbral está fijado en el código: todo se lee de acá. Una
+institución que no usa internado pone `subroles.internado.activo: false` y esa
+opción no le aparece a nadie de esa institución.
 
 Mientras no exista la pantalla de "Configuración de mi institución", estos
 valores se ajustan a mano desde la consola de Firebase.
 
-**2. Registrarse desde la app**, eligiendo esa institución. La cuenta queda en
-estado `pendiente`.
+---
 
-**3. Asignar el rol.**
+## Puesta en marcha del Polo Educativo Tecnológico
 
-```bash
-node scripts/asignar-rol.js tucorreo@ejemplo.com admin polo-rivera
-```
+Los scripts necesitan `scripts/service-account.json` (Firebase Console →
+**Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada**).
 
-**4. Cerrar sesión en la app y volver a entrar**, para que el token traiga el rol.
-
-Los roles `cocinero` y `encargado` se asignan igual. El `superadmin` es el único
-que no lleva institución:
+**1. Dar de alta la institución.**
 
 ```bash
-node scripts/asignar-rol.js tucorreo@ejemplo.com superadmin
+node scripts/crear-institucion.js polo-rivera "Polo Educativo Tecnológico" "Rivera" "Rivera" 11:30
 ```
+
+**2. Registrarse desde la app**, eligiendo Rivera y después el Polo. La cuenta
+queda en estado `pendiente`.
+
+**3. Asignar los roles.** Cada persona se registra primero desde la app y después
+recibe su rol:
+
+```bash
+node scripts/asignar-rol.js jefa@ejemplo.com      admin      polo-rivera
+node scripts/asignar-rol.js cocina@ejemplo.com    cocinero   polo-rivera
+node scripts/asignar-rol.js portera@ejemplo.com   encargado  polo-rivera
+node scripts/asignar-rol.js cristopher@ejemplo.com superadmin
+```
+
+**4. Cada uno cierra sesión y vuelve a entrar**, para que el token traiga el rol.
 
 ---
 
-## Qué hace la Fase 1
+## Cómo funciona el día a día
 
-- Registro en tres pasos: departamento, institución y datos personales.
-- Solo aparecen las instituciones dadas de alta y activas de ese departamento.
-- Cada registro nuevo queda en estado `pendiente` hasta que lo aprueba el
-  encargado **de esa institución**.
-- Login con sesión persistente entre reinicios de la app.
-- Pantalla de administración acotada a la propia institución: aprobar y rechazar.
-- Aviso de cédula repetida dentro de la institución antes de aprobar.
-- Pantalla de superadmin: catálogo nacional, activar y desactivar instituciones.
-- Enrutamiento por rol: cada usuario entra directamente a su pantalla.
-- Configuración operativa por institución (horarios, corte de edad, subroles y
-  contadores) ya creada en el modelo de datos, lista para las fases siguientes.
+**Cocinero** — carga el menú de hoy o de mañana: plato principal, complementos y
+postre, cada uno con sus ingredientes. Los ingredientes se muestran al alumno por
+las alergias. Al publicarlo, aparece al instante en la app de los alumnos.
 
-## Quién edita la configuración de una institución
+**Alumno** — ve el menú, toca "¡Voy a comer!" y le aparece el código QR. Puede
+cancelar hasta que suba. Si es del internado, marca a qué comidas del día va a
+subir. El QR se regenera en cada confirmación, así que una captura de pantalla
+vieja no sirve.
 
-| | admin de la institución | superadmin |
-|---|:--:|:--:|
-| Horarios, corte de edad, subroles, contadores | su institución | cualquiera |
-| Nombre, departamento, ciudad | no | sí |
-| Activar y desactivar en el catálogo | no | sí |
-| Dar de alta una institución nueva | no | sí |
+**Encargado** — abre el escáner y apunta al celular del alumno. En verde con el
+nombre si puede pasar; en rojo con el motivo si no: sin tickets, beca vencida,
+código de otro día, ya subió hoy. El resultado queda en pantalla hasta que lo
+toca, para que no se le escape. Si el alumno se quedó sin batería, lo busca por
+cédula y lo marca igual.
 
-La jefa de internado puede cambiar la hora de apertura de su comedor sin
-depender de nadie, pero no puede cambiar el nombre de la institución ni sacarla
-del catálogo nacional. Esto lo hacen cumplir las reglas, no la app.
+**Admin** — aprueba los registros nuevos, y en el listado de alumnos cobra
+tickets, cuponeras y mensualidades, asigna becas y marca quién es del internado.
+Cada cobro queda registrado en `pagos`, que no se puede editar ni borrar.
 
-## Cómo probar que la Fase 1 quedó bien
+**Pantalla del comedor** — los contadores en vivo: van a almorzar, ya subieron,
+faltan subir, y cuántos de los que faltan son chicos y cuántos grandes. El
+contador central cambia solo de nombre durante el día según los horarios de la
+institución.
+
+## Cómo se decide si un alumno puede comer
+
+En este orden: **internado con mensualidad al día → beca completa vigente →
+tickets disponibles**. La media beca no da acceso por sí sola: solo hace que se
+le cobre la mitad, y eso queda anotado en el pago.
+
+El descuento del ticket ocurre en una transacción atómica junto con la marca de
+presente. No hay forma de que se descuente un ticket sin quedar registrada la
+entrada, ni al revés.
+
+---
+
+## Generar el APK para instalar en los celulares
+
+```bash
+npm install --global eas-cli
+eas login
+eas build -p android --profile piloto
+```
+
+Devuelve un link de descarga del APK. Se instala directo en los celulares, sin
+pasar por Play Store. Para el piloto no conviene publicar en Play Store: cuesta
+USD 25, la revisión demora, y para una prueba en una sola institución no aporta
+nada.
+
+---
+
+## Cómo probar que quedó bien
+
+**El loop central**
+- [ ] El cocinero publica el menú y el alumno lo ve sin reiniciar la app.
+- [ ] El alumno toca "Voy a comer" y le aparece el QR.
+- [ ] El contador "van a almorzar" sube al confirmar y baja al cancelar.
+- [ ] El encargado escanea y sale en verde con el nombre del alumno.
+- [ ] "Ya subieron" sube y "faltan subir" baja.
+- [ ] Al alumno se le descontó un ticket.
+- [ ] Escanear el mismo código otra vez avisa que ya subió, con la hora.
+
+**Los casos borde del escáner**
+- [ ] Alumno sin tickets → rojo, "Sin tickets disponibles".
+- [ ] Alumno que no marcó hoy → rojo, "El alumno no marcó para comer hoy".
+- [ ] Alumno que canceló → rojo.
+- [ ] Alumno que confirmó, canceló y volvió a confirmar: el QR viejo no sirve.
+- [ ] Buscar por cédula marca la entrada y descuenta igual que el escaneo.
 
 **Registro y aprobación**
 - [ ] Elegir un departamento sin instituciones muestra el mensaje correspondiente.
 - [ ] Un alumno nuevo se registra y cae en la pantalla de espera.
-- [ ] Ese registro aparece en la pantalla del admin de su institución.
-- [ ] Al aprobarlo, la pantalla del alumno cambia sola, sin reiniciar la app.
-- [ ] Al rechazarlo, el alumno ve el mensaje de rechazo.
+- [ ] Al aprobarlo, la pantalla del alumno cambia sola.
 
 **Aislamiento entre instituciones**
-- [ ] Con dos instituciones dadas de alta y un registro pendiente en cada una,
-      cada admin ve únicamente el registro de la suya.
-
-**Sesión**
-- [ ] Cerrar la app por completo, abrirla de nuevo y seguir con la sesión iniciada.
-- [ ] "Cerrar sesión" devuelve al login.
-
-**Validaciones**
-- [ ] Correo mal escrito, cédula corta o contraseñas distintas muestran el error
-      debajo del campo correspondiente.
-- [ ] Registrarse con un correo ya usado muestra un mensaje claro, no un error crudo.
+- [ ] Con dos instituciones, cada admin ve solo los registros de la suya.
 
 **Seguridad**
 
-Estas pruebas verifican que las reglas bloquean lo que tienen que bloquear. Se
-hacen desde el simulador de reglas de Firestore
-(Firestore Database → Reglas → Simulador de Play):
+Desde el simulador de reglas de Firestore (Firestore Database → Reglas →
+Simulador de Play):
 
-- [ ] Un alumno intentando escribir `tickets: 20` en su propio documento → **denegado**.
-- [ ] Un alumno intentando escribir `rol: 'admin'` en su propio documento → **denegado**.
-- [ ] Un alumno intentando leer el documento de otro alumno → **denegado**.
-- [ ] Un alumno intentando aprobar su propio registro (`estado: 'activo'`) → **denegado**.
-- [ ] Un admin intentando leer un usuario de otra institución → **denegado**.
-- [ ] Un admin intentando cambiar el `institucionId` de un usuario → **denegado**.
-- [ ] Un usuario sin sesión intentando leer `usuarios` → **denegado**.
-- [ ] Alguien que no es superadmin dando de alta una institución → **denegado**.
-- [ ] Un admin cambiando `horarios` de su propia institución → **permitido**.
+- [ ] Un alumno escribiendo `tickets: 20` en su propio documento → **denegado**.
+- [ ] Un alumno escribiendo `rol: 'admin'` en su propio documento → **denegado**.
+- [ ] Un alumno poniéndose `estado: 'presente'` en su asistencia → **denegado**.
+- [ ] Un alumno leyendo el documento de otro alumno → **denegado**.
+- [ ] Un alumno modificando la asistencia de otro → **denegado**.
+- [ ] Un encargado cambiando `tickets` a un número cualquiera → **denegado**
+      (solo puede restar de a uno).
+- [ ] Un admin leyendo un usuario de otra institución → **denegado**.
 - [ ] Un admin cambiando `activa` o `nombre` de su institución → **denegado**.
-- [ ] Un admin cambiando la configuración de otra institución → **denegado**.
-- [ ] Un alumno registrándose con `subrol: 'internado'` → **denegado**.
+- [ ] Editar o borrar un documento de `pagos` → **denegado** siempre.
+- [ ] Un usuario sin sesión leyendo `usuarios` → **denegado**.
 
-La colección `instituciones` es la única que se lee sin sesión, porque la app
+`instituciones` es la única colección que se lee sin sesión, porque la app
 necesita mostrar la lista antes de que el alumno tenga cuenta. No contiene datos
 personales.
-
-Si alguna de estas pruebas pasa en vez de fallar, hay un agujero de seguridad y
-hay que corregirlo antes de seguir.
 
 ---
 
 ## Estructura del proyecto
 
 ```
-app/                      pantallas (Expo Router: cada archivo es una ruta)
+app/
   _layout.js              guardia de navegación: decide a dónde va cada rol
-  index.js                pantalla de arranque
   login.js
-  registro/
-    _layout.js
-    index.js              elegir departamento
-    institucion.js        elegir institución
-    datos.js              formulario de registro
+  registro/               departamento → institución → datos
   pendiente.js            espera de aprobación
-  alumno/index.js         (Fase 3)
-  cocinero/index.js       (Fase 2)
-  encargado/index.js      (Fase 4)
-  admin/index.js          aprobación de registros de su institución
+  alumno/index.js         menú del día, "Voy a comer" y código QR
+  cocinero/index.js       carga del menú
+  encargado/index.js      escáner de QR
+  encargado/manual.js     búsqueda por cédula
+  admin/index.js          aprobación de registros
+  alumnos/index.js        listado de alumnos
+  alumnos/[id].js         pagos, becas e internado
+  comedor.js              pantalla de contadores
   superadmin/index.js     catálogo nacional de instituciones
 
 src/
   firebase.js             inicialización del SDK
   contexts/AuthContext.js sesión, perfil, rol e institución en tiempo real
-  components/ui.js        Pantalla, Campo, Boton, Aviso, Opcion, Cargando
-  components/Encabezado.js
+  components/             Pantalla, Campo, Boton, Aviso, Encabezado, Navegación
+  acceso.js               con qué derecho come cada alumno
+  comedor.js              ids de documentos y rotación del contador
+  fechas.js               fechas, horas y edades
   validaciones.js         validación de campos y mensajes de error
   departamentos.json      los 19 departamentos
-  theme.js                colores, espaciados, tipografía
+  theme.js
 
 scripts/
   crear-institucion.js    da de alta una institución
   asignar-rol.js          asigna rol e institución como custom claims
 
 firestore.rules           reglas de seguridad
+eas.json                  perfil de build del APK del piloto
 ```
 
 ## Detalle sobre los roles
 
 El rol y la institución del personal viven en los **custom claims** de Firebase
-Auth, no en Firestore. El campo `rol` que existe en el documento de usuario es
-solo una copia informativa para poder mostrarlo en listas: no da ningún permiso.
+Auth, no en Firestore. El campo `rol` del documento de usuario es solo una copia
+informativa para mostrarlo en listas: no da ningún permiso.
 
-Como consecuencia, un usuario sin claim asignado se trata como **alumno** por
-defecto. Solo el personal recibe un claim explícito, y eso evita tener que correr
-el script por cada estudiante que se registre.
+Un usuario sin claim asignado se trata como **alumno** por defecto. Solo el
+personal recibe un claim explícito, y eso evita correr el script por cada
+estudiante que se registre.
 
 El alumno no lleva la institución en el claim: la eligió él al registrarse y vive
 en su documento. No hace falta protegerla con un claim porque no le da acceso a
@@ -228,28 +278,22 @@ nada por sí sola — la cuenta pasa igual por la aprobación de una persona.
 Cuando se le cambia el rol a alguien, **tiene que cerrar sesión y volver a
 entrar**: el token con los claims se emite al iniciar sesión.
 
-## El subrol de internado
+---
 
-El campo `subrol` del usuario nace en `null` y solo un admin puede pasarlo a
-`"internado"`. Las reglas rechazan un registro que intente crearse con subrol.
+## Limitaciones conocidas del piloto
 
-Qué comidas habilita ese subrol no lo decide el código sino
-`instituciones/{id}.subroles.internado.comidasHabilitadas`, así que una
-institución que dé las cuatro comidas y otra que dé solo almuerzo y cena
-conviven sin tocar nada.
-
-La pantalla donde el admin asigna el subrol se construye junto con el listado de
-alumnos, en la etapa de pagos y becas.
-
-## Pendiente para más adelante
-
-- **Cambiar de institución** desde "Mi perfil" (vuelve la cuenta a `pendiente` y
-  resetea tickets y beca). Hoy las reglas no permiten mover a un usuario de
-  institución, ni siquiera a un admin.
-- **Pantalla de configuración de la institución.** Mientras haya una sola
-  institución, los valores se cargan a mano en la consola. Se vuelve necesaria
-  antes de sumar la tercera.
-- **`fechaNacimiento` en `asistencias`.** Hay que guardarla al crear el
-  documento, en la etapa 3, para que la pantalla del comedor calcule chicos y
-  grandes contra el corte vigente y todo se reclasifique solo si ese corte
-  cambia. Es una línea, pero hay que acordarse en su momento.
+- **El escáner necesita conexión.** La validación es una transacción atómica
+  contra el servidor, y eso no funciona sin señal. Si el comedor se queda sin
+  wifi, la salida es la búsqueda por cédula cuando vuelva, o anotar en papel. La
+  cola local de escaneos diferidos queda para después de medir cuántas veces
+  pasa de verdad.
+- **El menú no tiene fotos.** Firebase Storage exige plan de pago, y el piloto
+  corre en el plan gratuito. El menú va con nombre e ingredientes, que es lo que
+  importa para las alergias.
+- **No hay menú de reserva.** Cargar dos menús posibles y confirmar cuál se hace
+  antes de las 8:00 quedó fuera del piloto a propósito.
+- **Cambiar de institución** desde "Mi perfil" todavía no existe. Las reglas no
+  permiten mover a un usuario de institución, ni siquiera a un admin.
+- **`fechaNacimiento` ya se guarda en cada asistencia**, así que si mañana se
+  cambia el corte de 15 a 16 años, los contadores se reclasifican solos sin
+  tocar el historial.

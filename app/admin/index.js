@@ -14,6 +14,7 @@ import { db } from '../../src/firebase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
+import { Navegacion } from '../../src/components/Navegacion';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
 
 function fechaCorta(marca) {
@@ -150,6 +151,14 @@ export default function Solicitudes() {
             ? '1 registro esperando aprobación'
             : `${solicitudes.length} registros esperando aprobación`
         }
+      />
+
+      <Navegacion
+        opciones={[
+          { titulo: 'Registros', ruta: '/admin' },
+          { titulo: 'Alumnos', ruta: '/alumnos' },
+          { titulo: 'Comedor', ruta: '/comedor' },
+        ]}
       />
 
       {!institucionId ? (

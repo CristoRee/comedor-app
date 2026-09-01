@@ -27,9 +27,17 @@ service cloud.firestore {
       return autenticado() && rol() == 'admin' && institucionDelClaim() == institucionId;
     }
 
+    // Quienes marcan entradas en la puerta del comedor.
     function esPersonalDe(institucionId) {
       return autenticado()
         && rol() in ['admin', 'encargado']
+        && institucionDelClaim() == institucionId;
+    }
+
+    // Quienes ven la operativa del día, incluido el cocinero.
+    function esEquipoDe(institucionId) {
+      return autenticado()
+        && rol() in ['admin', 'encargado', 'cocinero']
         && institucionDelClaim() == institucionId;
     }
 
@@ -70,8 +78,16 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/instituciones/$(institucionId)).data.activa == true;
       }
 
-      allow get: if esPropietario(uid) || esPersonalDe(resource.data.institucionId);
-      allow list: if esPersonalDe(resource.data.institucionId);
+      // El encargado no administra créditos: lo único que puede hacer es gastar
+      // uno, de a uno, al marcar una entrada.
+      function descuentaUnTicket() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tickets'])
+          && resource.data.tickets > 0
+          && request.resource.data.tickets == resource.data.tickets - 1;
+      }
+
+      allow get: if esPropietario(uid) || esEquipoDe(resource.data.institucionId);
+      allow list: if esEquipoDe(resource.data.institucionId);
 
       // Un registro nuevo entra siempre sin rol, sin subrol, sin permisos y sin
       // créditos, y solo contra una institución que existe y está activa.
@@ -88,10 +104,87 @@ service cloud.firestore {
         && institucionActiva(request.resource.data.institucionId);
 
       // La institución de un usuario no se cambia desde la administración.
-      allow update: if esAdminDe(resource.data.institucionId)
-        && request.resource.data.institucionId == resource.data.institucionId;
+      allow update: if request.resource.data.institucionId == resource.data.institucionId
+        && (
+          esAdminDe(resource.data.institucionId)
+          || (esPersonalDe(resource.data.institucionId) && descuentaUnTicket())
+        );
 
       allow delete: if esAdminDe(resource.data.institucionId);
+    }
+
+    // El menú no es dato personal: cualquier usuario con sesión puede leerlo.
+    match /menus/{menuId} {
+      allow read: if autenticado();
+      allow write: if autenticado()
+        && rol() in ['cocinero', 'admin']
+        && institucionDelClaim() == request.resource.data.institucionId;
+    }
+
+    match /asistencias/{asistenciaId} {
+      function idEsperado(institucionId, fecha, usuarioId) {
+        return asistenciaId == institucionId + '_' + fecha + '_' + usuarioId;
+      }
+
+      function camposDelEscaneo() {
+        return ['estado', 'presenteEn', 'escaneadoPor', 'medioAcceso'];
+      }
+
+      function camposDelAlumno() {
+        return ['estado', 'qrToken', 'comidas', 'confirmadoEn'];
+      }
+
+      allow get: if esPropietario(resource.data.usuarioId)
+        || esEquipoDe(resource.data.institucionId);
+      allow list: if esEquipoDe(resource.data.institucionId);
+
+      // El alumno confirma su propia asistencia. No puede darse por presente:
+      // eso solo pasa cuando alguien del comedor le escanea el código.
+      allow create: if (
+          esPropietario(request.resource.data.usuarioId)
+          && idEsperado(
+               request.resource.data.institucionId,
+               request.resource.data.fecha,
+               request.auth.uid
+             )
+          && request.resource.data.estado == 'confirmado'
+        )
+        || (
+          esPersonalDe(request.resource.data.institucionId)
+          && request.resource.data.estado == 'presente'
+          && idEsperado(
+               request.resource.data.institucionId,
+               request.resource.data.fecha,
+               request.resource.data.usuarioId
+             )
+        );
+
+      allow update: if (
+          esPropietario(resource.data.usuarioId)
+          && resource.data.estado != 'presente'
+          && request.resource.data.estado in ['confirmado', 'cancelado']
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(camposDelAlumno())
+        )
+        || (
+          esPersonalDe(resource.data.institucionId)
+          && request.resource.data.estado == 'presente'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(camposDelEscaneo())
+        );
+
+      allow delete: if false;
+    }
+
+    // Registro de auditoría: se crea y no se toca nunca más. Esa inmutabilidad
+    // es el argumento de transparencia sobre el dinero del comedor.
+    match /pagos/{pagoId} {
+      allow get, list: if esPropietario(resource.data.usuarioId)
+        || esAdminDe(resource.data.institucionId);
+      allow create: if esAdminDe(request.resource.data.institucionId)
+        && request.resource.data.registradoPor == request.auth.uid
+        && request.resource.data.fecha == request.time;
+      allow update, delete: if false;
     }
   }
 }
