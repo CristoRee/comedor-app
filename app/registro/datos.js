@@ -75,6 +75,7 @@ export default function DatosDelRegistro() {
         fechaNacimiento: Timestamp.fromDate(parsearFecha(datos.fechaNacimiento)),
         institucionId,
         rol: 'alumno',
+        subrol: null,
         estado: 'pendiente',
         tickets: 0,
         creadoEn: serverTimestamp(),

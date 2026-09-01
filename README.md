@@ -51,6 +51,34 @@ Los argumentos son: id, nombre, departamento, ciudad y hora de apertura del
 comedor. Queda activa, y desde ese momento aparece en la lista de registro de su
 departamento. Para ver las que ya existen: `node scripts/crear-institucion.js --listar`.
 
+El script crea también la configuración operativa completa, con los valores del
+Polo como punto de partida:
+
+```
+instituciones/{institucionId}
+  nombre, departamento, ciudad, activa, creadaEn
+
+  horarios: {
+    horaAperturaComedor       // el argumento del script
+    horaLimiteMenu: "08:00"   // hasta qué hora se puede ajustar el menú
+    finDesayuno:    "08:00"   // el contador "van a desayunar" desaparece acá
+    finAlmuerzo:    "13:00"   // el contador central pasa a "van a merendar"
+    finMerienda:    "18:00"   // pasa a "van a cenar"
+    finCena:        "23:00"   // vuelve a "van a almorzar"
+  }
+
+  edadCorteChicoGrande: 15
+  subroles:   { internado: { activo: true, comidasHabilitadas: [...] } }
+  contadores: { mostrarDesayuno: true, mostrarChicoGrande: true }
+```
+
+Ningún horario ni umbral está fijado en el código de la app: todo se lee de acá.
+Una institución que no usa internado pone `subroles.internado.activo: false` y
+esa opción no le aparece a nadie de esa institución.
+
+Mientras no exista la pantalla de "Configuración de mi institución", estos
+valores se ajustan a mano desde la consola de Firebase.
+
 **2. Registrarse desde la app**, eligiendo esa institución. La cuenta queda en
 estado `pendiente`.
 
@@ -82,6 +110,21 @@ node scripts/asignar-rol.js tucorreo@ejemplo.com superadmin
 - Aviso de cédula repetida dentro de la institución antes de aprobar.
 - Pantalla de superadmin: catálogo nacional, activar y desactivar instituciones.
 - Enrutamiento por rol: cada usuario entra directamente a su pantalla.
+- Configuración operativa por institución (horarios, corte de edad, subroles y
+  contadores) ya creada en el modelo de datos, lista para las fases siguientes.
+
+## Quién edita la configuración de una institución
+
+| | admin de la institución | superadmin |
+|---|:--:|:--:|
+| Horarios, corte de edad, subroles, contadores | su institución | cualquiera |
+| Nombre, departamento, ciudad | no | sí |
+| Activar y desactivar en el catálogo | no | sí |
+| Dar de alta una institución nueva | no | sí |
+
+La jefa de internado puede cambiar la hora de apertura de su comedor sin
+depender de nadie, pero no puede cambiar el nombre de la institución ni sacarla
+del catálogo nacional. Esto lo hacen cumplir las reglas, no la app.
 
 ## Cómo probar que la Fase 1 quedó bien
 
@@ -118,7 +161,11 @@ hacen desde el simulador de reglas de Firestore
 - [ ] Un admin intentando leer un usuario de otra institución → **denegado**.
 - [ ] Un admin intentando cambiar el `institucionId` de un usuario → **denegado**.
 - [ ] Un usuario sin sesión intentando leer `usuarios` → **denegado**.
-- [ ] Alguien que no es superadmin intentando escribir en `instituciones` → **denegado**.
+- [ ] Alguien que no es superadmin dando de alta una institución → **denegado**.
+- [ ] Un admin cambiando `horarios` de su propia institución → **permitido**.
+- [ ] Un admin cambiando `activa` o `nombre` de su institución → **denegado**.
+- [ ] Un admin cambiando la configuración de otra institución → **denegado**.
+- [ ] Un alumno registrándose con `subrol: 'internado'` → **denegado**.
 
 La colección `instituciones` es la única que se lee sin sesión, porque la app
 necesita mostrar la lista antes de que el alumno tenga cuenta. No contiene datos
@@ -181,8 +228,28 @@ nada por sí sola — la cuenta pasa igual por la aprobación de una persona.
 Cuando se le cambia el rol a alguien, **tiene que cerrar sesión y volver a
 entrar**: el token con los claims se emite al iniciar sesión.
 
+## El subrol de internado
+
+El campo `subrol` del usuario nace en `null` y solo un admin puede pasarlo a
+`"internado"`. Las reglas rechazan un registro que intente crearse con subrol.
+
+Qué comidas habilita ese subrol no lo decide el código sino
+`instituciones/{id}.subroles.internado.comidasHabilitadas`, así que una
+institución que dé las cuatro comidas y otra que dé solo almuerzo y cena
+conviven sin tocar nada.
+
+La pantalla donde el admin asigna el subrol se construye junto con el listado de
+alumnos, en la etapa de pagos y becas.
+
 ## Pendiente para más adelante
 
-Cambiar de institución desde "Mi perfil" (vuelve la cuenta a `pendiente` y
-resetea tickets y beca) queda para cuando se construya esa pantalla. Hoy las
-reglas no permiten mover a un usuario de institución, ni siquiera a un admin.
+- **Cambiar de institución** desde "Mi perfil" (vuelve la cuenta a `pendiente` y
+  resetea tickets y beca). Hoy las reglas no permiten mover a un usuario de
+  institución, ni siquiera a un admin.
+- **Pantalla de configuración de la institución.** Mientras haya una sola
+  institución, los valores se cargan a mano en la consola. Se vuelve necesaria
+  antes de sumar la tercera.
+- **`fechaNacimiento` en `asistencias`.** Hay que guardarla al crear el
+  documento, en la etapa 3, para que la pantalla del comedor calcule chicos y
+  grandes contra el corte vigente y todo se reclasifique solo si ese corte
+  cambia. Es una línea, pero hay que acordarse en su momento.

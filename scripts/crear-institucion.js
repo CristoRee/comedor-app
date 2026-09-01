@@ -8,6 +8,29 @@ const USO =
   'Uso: node scripts/crear-institucion.js <id> "<nombre>" "<departamento>" "<ciudad>" <horaApertura>\n' +
   '     node scripts/crear-institucion.js --listar';
 
+// Configuración operativa inicial. Se ajusta después por institución desde la
+// consola de Firebase o desde la pantalla de administración.
+const CONFIGURACION_INICIAL = {
+  horarios: {
+    horaLimiteMenu: '08:00',
+    finDesayuno: '08:00',
+    finAlmuerzo: '13:00',
+    finMerienda: '18:00',
+    finCena: '23:00',
+  },
+  edadCorteChicoGrande: 15,
+  subroles: {
+    internado: {
+      activo: true,
+      comidasHabilitadas: ['desayuno', 'almuerzo', 'merienda', 'cena'],
+    },
+  },
+  contadores: {
+    mostrarDesayuno: true,
+    mostrarChicoGrande: true,
+  },
+};
+
 const credencial = path.join(__dirname, 'service-account.json');
 
 if (!fs.existsSync(credencial)) {
@@ -31,7 +54,10 @@ async function listar() {
     .sort((a, b) => a.departamento.localeCompare(b.departamento) || a.nombre.localeCompare(b.nombre))
     .forEach((institucion) => {
       const estado = institucion.activa ? 'activa' : 'inactiva';
-      console.log(`${institucion.id}\t${institucion.departamento}\t${institucion.nombre} (${estado})`);
+      const apertura = institucion.horarios?.horaAperturaComedor ?? '—';
+      console.log(
+        `${institucion.id}\t${institucion.departamento}\t${institucion.nombre} (${estado}, abre ${apertura})`
+      );
     });
 }
 
@@ -58,12 +84,18 @@ async function crear([id, nombre, departamento, ciudad, horaApertura]) {
     nombre,
     departamento,
     ciudad,
-    horaApertura,
     activa: true,
     creadaEn: FieldValue.serverTimestamp(),
+    ...CONFIGURACION_INICIAL,
+    horarios: { horaAperturaComedor: horaApertura, ...CONFIGURACION_INICIAL.horarios },
   });
 
   console.log(`Institución ${id} creada y activa.`);
+  console.log('Configuración operativa inicial:');
+  console.log(`  apertura del comedor      ${horaApertura}`);
+  console.log(`  límite de cambio de menú  ${CONFIGURACION_INICIAL.horarios.horaLimiteMenu}`);
+  console.log(`  corte chicos/grandes      ${CONFIGURACION_INICIAL.edadCorteChicoGrande} años`);
+  console.log('  internado                 activo, 4 comidas');
 }
 
 const argumentos = process.argv.slice(2);

@@ -93,7 +93,12 @@ export default function CatalogoInstituciones() {
               <View style={estilos.textos}>
                 <Text style={estilos.nombre}>{item.nombre}</Text>
                 <Text style={estilos.ubicacion}>{`${item.ciudad}, ${item.departamento}`}</Text>
-                <Text style={estilos.ubicacion}>{`Apertura del comedor: ${item.horaApertura}`}</Text>
+                <Text style={estilos.ubicacion}>
+                  {`Abre ${item.horarios?.horaAperturaComedor ?? '—'} · corte ${item.edadCorteChicoGrande ?? '—'} años`}
+                </Text>
+                <Text style={estilos.ubicacion}>
+                  {`Internado: ${item.subroles?.internado?.activo ? 'activo' : 'sin uso'}`}
+                </Text>
               </View>
               <Text style={[estilos.estado, item.activa ? estilos.estadoActiva : estilos.estadoInactiva]}>
                 {item.activa ? 'Activa' : 'Inactiva'}

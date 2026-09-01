@@ -40,15 +40,28 @@ service cloud.firestore {
     // El catálogo se lee sin sesión: la app tiene que mostrarlo antes de que el
     // alumno tenga cuenta. No contiene datos personales.
     match /instituciones/{institucionId} {
+      function camposDeConfiguracion() {
+        return ['horarios', 'edadCorteChicoGrande', 'subroles', 'contadores'];
+      }
+
       allow read: if true;
-      allow write: if esSuperadmin();
+      allow create, delete: if esSuperadmin();
+
+      // El admin ajusta la operativa de su institución. La identidad y el alta
+      // en el catálogo nacional quedan del lado del superadmin.
+      allow update: if esSuperadmin()
+        || (
+          esAdminDe(institucionId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(camposDeConfiguracion())
+        );
     }
 
     match /usuarios/{uid} {
       function camposDeRegistro() {
         return [
           'nombre', 'apellido', 'ci', 'email', 'telefono', 'fechaNacimiento',
-          'institucionId', 'rol', 'estado', 'tickets', 'creadoEn'
+          'institucionId', 'rol', 'subrol', 'estado', 'tickets', 'creadoEn'
         ];
       }
 
@@ -60,12 +73,13 @@ service cloud.firestore {
       allow get: if esPropietario(uid) || esPersonalDe(resource.data.institucionId);
       allow list: if esPersonalDe(resource.data.institucionId);
 
-      // Un registro nuevo entra siempre sin rol, sin permisos y sin créditos, y
-      // solo contra una institución que existe y está activa.
+      // Un registro nuevo entra siempre sin rol, sin subrol, sin permisos y sin
+      // créditos, y solo contra una institución que existe y está activa.
       allow create: if esPropietario(uid)
         && request.resource.data.keys().hasOnly(camposDeRegistro())
         && request.resource.data.keys().hasAll(camposDeRegistro())
         && request.resource.data.rol == 'alumno'
+        && request.resource.data.subrol == null
         && request.resource.data.estado == 'pendiente'
         && request.resource.data.tickets == 0
         && request.resource.data.email == request.auth.token.email.lower()
