@@ -17,7 +17,7 @@ import { Navegacion } from '../../src/components/Navegacion';
 import { claveDeFecha, horaCorta } from '../../src/fechas';
 import { comidasDelSubrol, idAsistencia } from '../../src/comedor';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
-import { limpiarNumeros } from '../../src/validaciones';
+import { formatoCedula, limpiarNumeros } from '../../src/validaciones';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
 
 export default function BusquedaManual() {
@@ -143,9 +143,11 @@ export default function BusquedaManual() {
         etiqueta="Cédula de identidad"
         value={cedula}
         onChangeText={setCedula}
+        formato={formatoCedula}
         keyboardType="number-pad"
-        maxLength={8}
         placeholder="11223344"
+        returnKeyType="search"
+        onSubmitEditing={buscar}
       />
 
       <Boton titulo="Buscar" onPress={buscar} cargando={buscando} />

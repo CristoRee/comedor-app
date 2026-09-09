@@ -15,7 +15,7 @@ import { db } from '../../src/firebase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Campo, Cargando, Pantalla } from '../../src/components/ui';
 import { fechaCorta } from '../../src/fechas';
-import { parsearFecha } from '../../src/validaciones';
+import { formatoFecha, parsearFecha } from '../../src/validaciones';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
 
@@ -42,7 +42,7 @@ export default function FichaDelAlumno() {
   const [monto, setMonto] = useState('');
   const [becaDesde, setBecaDesde] = useState('');
   const [becaHasta, setBecaHasta] = useState('');
-  const [procesando, setProcesando] = useState(false);
+  const [accion, setAccion] = useState(null);
   const [aviso, setAviso] = useState(null);
 
   useEffect(() => {
@@ -53,15 +53,27 @@ export default function FichaDelAlumno() {
     );
   }, [id]);
 
-  async function registrarPago(tipo, ticketsOtorgados, cambiosEnUsuario) {
+  function pedirConfirmacionDePago(tipo, etiqueta, ticketsOtorgados, cambiosEnUsuario) {
     const valor = Number(monto.replace(',', '.'));
 
-    if (!Number.isFinite(valor) || valor < 0) {
+    if (!monto.trim() || !Number.isFinite(valor) || valor < 0) {
       setAviso({ tipo: 'error', texto: 'Escribí el monto cobrado antes de registrar.' });
       return;
     }
 
-    setProcesando(true);
+    // El pago no se puede editar ni borrar después, así que se confirma antes.
+    Alert.alert(
+      'Confirmar cobro',
+      `${etiqueta} a ${alumno.nombre} ${alumno.apellido} por $ ${valor}.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Registrar', onPress: () => registrarPago(tipo, valor, ticketsOtorgados, cambiosEnUsuario) },
+      ]
+    );
+  }
+
+  async function registrarPago(tipo, valor, ticketsOtorgados, cambiosEnUsuario) {
+    setAccion(tipo);
     setAviso(null);
 
     try {
@@ -84,7 +96,7 @@ export default function FichaDelAlumno() {
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo registrar el pago. Revisá la conexión.' });
     } finally {
-      setProcesando(false);
+      setAccion(null);
     }
   }
 
@@ -102,7 +114,7 @@ export default function FichaDelAlumno() {
       return;
     }
 
-    setProcesando(true);
+    setAccion(`beca_${tipo}`);
     setAviso(null);
 
     try {
@@ -113,12 +125,12 @@ export default function FichaDelAlumno() {
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo asignar la beca.' });
     } finally {
-      setProcesando(false);
+      setAccion(null);
     }
   }
 
-  async function cambiar(cambios, mensaje) {
-    setProcesando(true);
+  async function cambiar(clave, cambios, mensaje) {
+    setAccion(clave);
     setAviso(null);
 
     try {
@@ -127,7 +139,7 @@ export default function FichaDelAlumno() {
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo guardar el cambio.' });
     } finally {
-      setProcesando(false);
+      setAccion(null);
     }
   }
 
@@ -208,29 +220,40 @@ export default function FichaDelAlumno() {
 
       <Boton
         titulo="Cobrar 1 ticket"
-        onPress={() => registrarPago('ticket', 1, { tickets: increment(1) })}
-        cargando={procesando}
+        onPress={() =>
+          pedirConfirmacionDePago('ticket', 'Cobrar 1 ticket', 1, { tickets: increment(1) })
+        }
+        cargando={accion === 'ticket'}
+        deshabilitado={Boolean(accion)}
       />
 
       <Boton
         titulo={`Cobrar cuponera (${TICKETS_POR_CUPONERA} tickets)`}
         onPress={() =>
-          registrarPago('cuponera', TICKETS_POR_CUPONERA, {
-            tickets: increment(TICKETS_POR_CUPONERA),
-          })
+          pedirConfirmacionDePago(
+            'cuponera',
+            `Cobrar una cuponera de ${TICKETS_POR_CUPONERA} tickets`,
+            TICKETS_POR_CUPONERA,
+            { tickets: increment(TICKETS_POR_CUPONERA) }
+          )
         }
-        cargando={procesando}
+        cargando={accion === 'cuponera'}
+        deshabilitado={Boolean(accion)}
       />
 
       {esInterno ? (
         <Boton
           titulo="Cobrar mensualidad del internado"
           onPress={() =>
-            registrarPago('mensualidad_internado', 0, {
-              internado: { activo: true, mensualidadHasta: Timestamp.fromDate(finDelMes()) },
-            })
+            pedirConfirmacionDePago(
+              'mensualidad_internado',
+              `Cobrar la mensualidad hasta el ${fechaCorta(finDelMes())}`,
+              0,
+              { internado: { activo: true, mensualidadHasta: Timestamp.fromDate(finDelMes()) } }
+            )
           }
-          cargando={procesando}
+          cargando={accion === 'mensualidad_internado'}
+          deshabilitado={Boolean(accion)}
         />
       ) : null}
 
@@ -240,6 +263,8 @@ export default function FichaDelAlumno() {
         etiqueta="Desde"
         value={becaDesde}
         onChangeText={setBecaDesde}
+        formato={formatoFecha}
+        keyboardType="number-pad"
         placeholder="dd/mm/aaaa"
         maxLength={10}
       />
@@ -247,30 +272,39 @@ export default function FichaDelAlumno() {
         etiqueta="Hasta"
         value={becaHasta}
         onChangeText={setBecaHasta}
+        formato={formatoFecha}
+        keyboardType="number-pad"
         placeholder="dd/mm/aaaa"
         maxLength={10}
       />
 
-      <Boton titulo="Dar beca completa" onPress={() => asignarBeca('completa')} cargando={procesando} />
+      <Boton
+        titulo="Dar beca completa"
+        onPress={() => asignarBeca('completa')}
+        cargando={accion === 'beca_completa'}
+        deshabilitado={Boolean(accion)}
+      />
       <Boton
         titulo="Dar media beca"
         variante="secundario"
         onPress={() => asignarBeca('media')}
-        cargando={procesando}
+        cargando={accion === 'beca_media'}
+        deshabilitado={Boolean(accion)}
       />
 
       {alumno.beca?.tipo ? (
         <Boton
           titulo="Quitar la beca"
           variante="peligro"
-          cargando={procesando}
+          cargando={accion === 'quitar_beca'}
+          deshabilitado={Boolean(accion)}
           onPress={() =>
             Alert.alert('Quitar la beca', `¿Quitarle la beca a ${alumno.nombre}?`, [
               { text: 'Cancelar', style: 'cancel' },
               {
                 text: 'Quitar',
                 style: 'destructive',
-                onPress: () => cambiar({ beca: null }, 'Beca quitada.'),
+                onPress: () => cambiar('quitar_beca', { beca: null }, 'Beca quitada.'),
               },
             ])
           }
@@ -282,9 +316,11 @@ export default function FichaDelAlumno() {
       <Boton
         titulo={esInterno ? 'Sacar del internado' : 'Marcar como alumno del internado'}
         variante="secundario"
-        cargando={procesando}
+        cargando={accion === 'internado'}
+        deshabilitado={Boolean(accion)}
         onPress={() =>
           cambiar(
+            'internado',
             esInterno
               ? { subrol: null, internado: null }
               : { subrol: 'internado', internado: { activo: true, mensualidadHasta: null } },

@@ -62,18 +62,66 @@ export function validarContrasenia(texto) {
   return null;
 }
 
-const MENSAJES_AUTH = {
+const MENSAJES = {
+  // Autenticación
   'auth/invalid-email': 'El correo no es válido.',
   'auth/email-already-in-use': 'Ya existe una cuenta registrada con ese correo.',
   'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+  'auth/password-does-not-meet-requirements':
+    'La contraseña no cumple los requisitos del proyecto. Probá con una más larga.',
+  'auth/missing-password': 'Escribí una contraseña.',
   'auth/invalid-credential': 'Correo o contraseña incorrectos.',
   'auth/wrong-password': 'Correo o contraseña incorrectos.',
   'auth/user-not-found': 'Correo o contraseña incorrectos.',
   'auth/user-disabled': 'Esta cuenta fue deshabilitada. Consultá con administración.',
   'auth/too-many-requests': 'Demasiados intentos fallidos. Esperá unos minutos.',
   'auth/network-request-failed': 'Sin conexión. Revisá el wifi o los datos del celular.',
+  'auth/operation-not-allowed':
+    'El ingreso con correo y contraseña está desactivado en Firebase. Hay que habilitarlo en Authentication → Sign-in method.',
+  'auth/invalid-api-key': 'La configuración de Firebase de la app no es válida.',
+  'auth/configuration-not-found':
+    'Falta configurar Authentication en Firebase. Habilitá el método de correo y contraseña.',
+
+  // Firestore
+  'permission-denied':
+    'La base de datos rechazó la operación. Revisá que las reglas de firestore.rules estén publicadas en Firebase.',
+  unavailable: 'No se pudo conectar con la base de datos. Revisá la conexión.',
+  'deadline-exceeded': 'La conexión tardó demasiado. Probá de nuevo.',
+  unauthenticated: 'La sesión venció. Volvé a iniciar sesión.',
+  'failed-precondition': 'La base de datos necesita un índice que todavía no existe.',
 };
 
+// El código crudo se muestra al final a propósito: sin él, un fallo de
+// configuración de Firebase es indistinguible de un problema de conexión.
 export function mensajeDeError(error) {
-  return MENSAJES_AUTH[error?.code] ?? 'No se pudo completar la operación. Intentá de nuevo.';
+  const codigo = error?.code;
+  const conocido = MENSAJES[codigo];
+
+  if (conocido) return conocido;
+  if (codigo) return `No se pudo completar la operación (${codigo}).`;
+
+  return 'No se pudo completar la operación. Intentá de nuevo.';
+}
+
+// Máscaras de entrada: el usuario escribe solo dígitos y los separadores se
+// colocan solos mientras escribe.
+export function formatoFecha(texto) {
+  const digitos = limpiarNumeros(texto).slice(0, 8);
+
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+}
+
+export function formatoCedula(texto) {
+  return limpiarNumeros(texto).slice(0, 8);
+}
+
+export function formatoTelefono(texto) {
+  return limpiarNumeros(texto).slice(0, 9);
+}
+
+export function formatoCorreo(texto) {
+  return texto.replace(/\s/g, '');
 }

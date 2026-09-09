@@ -1,6 +1,7 @@
-import { forwardRef } from 'react';
+import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,15 +10,68 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colores, espaciado, radio, tipografia } from '../theme';
 
+const ContextoDePantalla = createContext(null);
+
 export function Pantalla({ children, scroll = true, contentContainerStyle, bordes = ['top', 'bottom'] }) {
+  const referenciaScroll = useRef(null);
+  const campoEnfocado = useRef(null);
+  const { height: altoDeVentana } = useWindowDimensions();
+  const [tecladoAbierto, setTecladoAbierto] = useState(false);
+
+  const subirCampoEnfocado = useCallback(() => {
+    if (campoEnfocado.current === null) return;
+
+    referenciaScroll.current?.scrollTo({
+      y: Math.max(campoEnfocado.current - espaciado.md, 0),
+      animated: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    // Hay que volver a subir cuando el teclado terminó de abrirse: el alto
+    // visible recién ahí es el definitivo, y el desplazamiento del onFocus se
+    // calculó contra la pantalla todavía entera.
+    const abre = Keyboard.addListener('keyboardDidShow', () => {
+      setTecladoAbierto(true);
+      setTimeout(subirCampoEnfocado, 50);
+    });
+    const cierra = Keyboard.addListener('keyboardDidHide', () => {
+      setTecladoAbierto(false);
+      campoEnfocado.current = null;
+    });
+
+    return () => {
+      abre.remove();
+      cierra.remove();
+    };
+  }, [subirCampoEnfocado]);
+
+  // El campo enfocado se sube al tope del área visible. Sin esto, en Android el
+  // teclado tapa los últimos campos del formulario y no se ve lo que se escribe.
+  const desplazarAlCampo = useCallback(
+    (y) => {
+      campoEnfocado.current = y;
+      setTimeout(subirCampoEnfocado, 150);
+    },
+    [subirCampoEnfocado]
+  );
+
+  // Espacio extra al final mientras se escribe: sin él, el último campo no
+  // tiene contra qué desplazarse y se queda debajo del teclado.
+  const relleno = tecladoAbierto ? { paddingBottom: altoDeVentana * 0.55 } : null;
+
   const contenido = scroll ? (
     <ScrollView
-      contentContainerStyle={[estilos.scroll, contentContainerStyle]}
+      ref={referenciaScroll}
+      contentContainerStyle={[estilos.scroll, contentContainerStyle, relleno]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
     >
       {children}
     </ScrollView>
@@ -26,14 +80,16 @@ export function Pantalla({ children, scroll = true, contentContainerStyle, borde
   );
 
   return (
-    <SafeAreaView style={estilos.pantalla} edges={bordes}>
-      <KeyboardAvoidingView
-        style={estilos.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {contenido}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <ContextoDePantalla.Provider value={{ desplazarAlCampo }}>
+      <SafeAreaView style={estilos.pantalla} edges={bordes}>
+        <KeyboardAvoidingView
+          style={estilos.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          {contenido}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ContextoDePantalla.Provider>
   );
 }
 
@@ -46,20 +102,68 @@ export function Subtitulo({ children }) {
 }
 
 export const Campo = forwardRef(function Campo(
-  { etiqueta, error, ayuda, ...props },
+  {
+    etiqueta,
+    error,
+    ayuda,
+    exito,
+    formato,
+    secureTextEntry,
+    onChangeText,
+    onFocus,
+    ...props
+  },
   ref
 ) {
+  const [oculto, setOculto] = useState(Boolean(secureTextEntry));
+  const [posicion, setPosicion] = useState(0);
+  const contexto = useContext(ContextoDePantalla);
+
+  function alCambiar(valor) {
+    onChangeText?.(formato ? formato(valor) : valor);
+  }
+
+  function alEnfocar(evento) {
+    contexto?.desplazarAlCampo(posicion);
+    onFocus?.(evento);
+  }
+
   return (
-    <View style={estilos.campo}>
+    <View style={estilos.campo} onLayout={(evento) => setPosicion(evento.nativeEvent.layout.y)}>
       <Text style={estilos.etiqueta}>{etiqueta}</Text>
-      <TextInput
-        ref={ref}
-        style={[estilos.input, error && estilos.inputError]}
-        placeholderTextColor={colores.textoSuave}
-        {...props}
-      />
+
+      <View>
+        <TextInput
+          ref={ref}
+          style={[
+            estilos.input,
+            secureTextEntry && estilos.inputConBoton,
+            error && estilos.inputError,
+            !error && exito && estilos.inputExito,
+          ]}
+          placeholderTextColor={colores.textoSuave}
+          secureTextEntry={oculto}
+          onChangeText={alCambiar}
+          onFocus={alEnfocar}
+          {...props}
+        />
+
+        {secureTextEntry ? (
+          <Pressable
+            style={estilos.ojo}
+            onPress={() => setOculto((previo) => !previo)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={oculto ? 'Mostrar la contraseña' : 'Ocultar la contraseña'}
+          >
+            <Text style={estilos.ojoTexto}>{oculto ? 'Mostrar' : 'Ocultar'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
       {error ? <Text style={estilos.mensajeError}>{error}</Text> : null}
-      {!error && ayuda ? <Text style={estilos.ayuda}>{ayuda}</Text> : null}
+      {!error && exito ? <Text style={estilos.mensajeExito}>{exito}</Text> : null}
+      {!error && !exito && ayuda ? <Text style={estilos.ayuda}>{ayuda}</Text> : null}
     </View>
   );
 });
@@ -71,6 +175,9 @@ export function Boton({ titulo, onPress, cargando, deshabilitado, variante = 'pr
     <Pressable
       onPress={onPress}
       disabled={inactivo}
+      accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityState={{ disabled: Boolean(inactivo), busy: Boolean(cargando) }}
       style={({ pressed }) => [
         estilos.boton,
         estilos[`boton_${variante}`],
@@ -89,7 +196,7 @@ export function Boton({ titulo, onPress, cargando, deshabilitado, variante = 'pr
 
 export function Aviso({ tipo = 'info', titulo, children }) {
   return (
-    <View style={[estilos.aviso, estilos[`aviso_${tipo}`]]}>
+    <View style={[estilos.aviso, estilos[`aviso_${tipo}`]]} accessibilityRole="alert">
       {titulo ? <Text style={[estilos.avisoTitulo, estilos[`avisoTexto_${tipo}`]]}>{titulo}</Text> : null}
       <Text style={[estilos.avisoTexto, estilos[`avisoTexto_${tipo}`]]}>{children}</Text>
     </View>
@@ -100,6 +207,8 @@ export function Opcion({ titulo, detalle, onPress }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={detalle ? `${titulo}, ${detalle}` : titulo}
       style={({ pressed }) => [estilos.opcion, pressed && estilos.opcionPresionada]}
     >
       <View style={estilos.opcionTextos}>
@@ -139,9 +248,22 @@ const estilos = StyleSheet.create({
     paddingVertical: espaciado.sm + 4,
     fontSize: tipografia.cuerpo,
     color: colores.texto,
+    minHeight: 48,
   },
+  inputConBoton: { paddingRight: 84 },
   inputError: { borderColor: colores.error },
+  inputExito: { borderColor: colores.exito },
+  ojo: {
+    position: 'absolute',
+    right: espaciado.sm,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: espaciado.sm,
+  },
+  ojoTexto: { fontSize: tipografia.nota, color: colores.primario, fontWeight: '600' },
   mensajeError: { fontSize: tipografia.nota, color: colores.error },
+  mensajeExito: { fontSize: tipografia.nota, color: colores.exito },
   ayuda: { fontSize: tipografia.nota, color: colores.textoSuave },
 
   boton: {
@@ -184,6 +306,7 @@ const estilos = StyleSheet.create({
     borderRadius: radio.md,
     paddingHorizontal: espaciado.md,
     paddingVertical: espaciado.md,
+    minHeight: 56,
   },
   opcionPresionada: { backgroundColor: '#eef2f7' },
   opcionTextos: { flex: 1, gap: 2 },

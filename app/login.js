@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../src/firebase';
 import { Aviso, Boton, Campo, Pantalla, Subtitulo, Titulo } from '../src/components/ui';
-import { mensajeDeError, validarCorreo } from '../src/validaciones';
+import { formatoCorreo, mensajeDeError, validarCorreo } from '../src/validaciones';
 import { colores, espaciado, tipografia } from '../src/theme';
 
 export default function Login() {
@@ -13,6 +13,8 @@ export default function Login() {
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState(null);
   const [enviando, setEnviando] = useState(false);
+
+  const campoContrasenia = useRef(null);
 
   async function ingresar() {
     const revision = {
@@ -38,7 +40,7 @@ export default function Login() {
     <Pantalla contentContainerStyle={estilos.contenido}>
       <View style={estilos.encabezado}>
         <Titulo>Mi Bandeja</Titulo>
-        <Subtitulo>Comedor del Polo Educativo Tecnológico</Subtitulo>
+        <Subtitulo>Comedor institucional</Subtitulo>
       </View>
 
       {errorGeneral ? <Aviso tipo="error">{errorGeneral}</Aviso> : null}
@@ -46,22 +48,38 @@ export default function Login() {
       <Campo
         etiqueta="Correo electrónico"
         value={correo}
-        onChangeText={setCorreo}
+        onChangeText={(valor) => {
+          setCorreo(valor);
+          setErrores((previos) => ({ ...previos, correo: null }));
+        }}
+        onBlur={() => setErrores((previos) => ({ ...previos, correo: validarCorreo(correo) }))}
         error={errores.correo}
+        formato={formatoCorreo}
         autoCapitalize="none"
+        autoCorrect={false}
         autoComplete="email"
         keyboardType="email-address"
         placeholder="nombre@ejemplo.com"
+        returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => campoContrasenia.current?.focus()}
       />
 
       <Campo
+        ref={campoContrasenia}
         etiqueta="Contraseña"
         value={contrasenia}
-        onChangeText={setContrasenia}
+        onChangeText={(valor) => {
+          setContrasenia(valor);
+          setErrores((previos) => ({ ...previos, contrasenia: null }));
+        }}
         error={errores.contrasenia}
-        autoCapitalize="none"
         secureTextEntry
+        autoCapitalize="none"
+        autoComplete="current-password"
         placeholder="Tu contraseña"
+        returnKeyType="done"
+        onSubmitEditing={ingresar}
       />
 
       <Boton titulo="Ingresar" onPress={ingresar} cargando={enviando} />
@@ -69,7 +87,7 @@ export default function Login() {
       <View style={estilos.pie}>
         <Text style={estilos.pieTexto}>¿Todavía no tenés cuenta?</Text>
         <Link href="/registro" asChild>
-          <Pressable>
+          <Pressable accessibilityRole="link">
             <Text style={estilos.enlace}>Registrarme</Text>
           </Pressable>
         </Link>
