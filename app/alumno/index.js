@@ -123,7 +123,7 @@ export default function InicioAlumno() {
   }
 
   function preguntarConfirmacion() {
-    const plato = menu?.principal?.nombre ?? 'la comida de hoy';
+    const plato = menu?.principal?.nombre ?? 'la comida de hoy,';
 
     Alert.alert('Confirmar asistencia', `¿Subís al comedor a comer ${plato} hoy?`, [
       { text: 'No', style: 'cancel' },
