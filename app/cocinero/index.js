@@ -6,6 +6,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Campo, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
+import { navegacionDe } from '../../src/permisos';
 import { claveDeFecha, fechaLegible } from '../../src/fechas';
 import { idMenu } from '../../src/comedor';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
@@ -30,7 +31,7 @@ function manana() {
 }
 
 export default function MenuDelDia() {
-  const { usuario, perfil, institucionId, institucion } = useAuth();
+  const { usuario, perfil, rol, institucionId, institucion } = useAuth();
   const [dia, setDia] = useState('hoy');
   const [principal, setPrincipal] = useState(PLATO_VACIO);
   const [complementos, setComplementos] = useState([]);
@@ -132,12 +133,7 @@ export default function MenuDelDia() {
         nota={institucion?.nombre}
       />
 
-      <Navegacion
-        opciones={[
-          { titulo: 'Menú', ruta: '/cocinero' },
-          { titulo: 'Comedor', ruta: '/comedor' },
-        ]}
-      />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       <View style={estilos.selectorDia}>
         <Pressable

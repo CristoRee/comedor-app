@@ -7,6 +7,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
+import { navegacionDe } from '../../src/permisos';
 import { claveDeFecha, horaCorta } from '../../src/fechas';
 import { idAsistencia } from '../../src/comedor';
 import { evaluarAcceso } from '../../src/acceso';
@@ -21,7 +22,7 @@ const NOMBRE_MEDIO = {
 class RechazoDeAcceso extends Error {}
 
 export default function Escaner() {
-  const { usuario, perfil, institucionId, institucion } = useAuth();
+  const { usuario, perfil, rol, institucionId, institucion } = useAuth();
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [resultado, setResultado] = useState(null);
   const [ocupado, setOcupado] = useState(false);
@@ -157,13 +158,7 @@ export default function Escaner() {
         nota={institucion?.nombre}
       />
 
-      <Navegacion
-        opciones={[
-          { titulo: 'Escáner', ruta: '/encargado' },
-          { titulo: 'Por cédula', ruta: '/encargado/manual' },
-          { titulo: 'Comedor', ruta: '/comedor' },
-        ]}
-      />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       <View style={estilos.visor}>
         <CameraView

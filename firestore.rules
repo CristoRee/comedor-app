@@ -52,16 +52,26 @@ service cloud.firestore {
         return ['horarios', 'edadCorteChicoGrande', 'subroles', 'contadores'];
       }
 
+      function cambios() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      // Los permisos vienen activados si el documento todavía no los declara.
+      function permiteAlAdmin(clave) {
+        return resource.data.get(['permisosDelAdmin', clave], true) == true;
+      }
+
       allow read: if true;
       allow create, delete: if esSuperadmin();
 
-      // El admin ajusta la operativa de su institución. La identidad y el alta
-      // en el catálogo nacional quedan del lado del superadmin.
+      // El admin ajusta la operativa de su institución, y los precios solo si
+      // el superadmin se lo habilitó. La identidad, el alta en el catálogo y
+      // los permisos quedan del lado del superadmin.
       allow update: if esSuperadmin()
         || (
           esAdminDe(institucionId)
-          && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(camposDeConfiguracion())
+          && cambios().hasOnly(camposDeConfiguracion().concat(['precios']))
+          && (!cambios().hasAny(['precios']) || permiteAlAdmin('ajustarPrecios'))
         );
     }
 
@@ -179,8 +189,14 @@ service cloud.firestore {
     // Registro de auditoría: se crea y no se toca nunca más. Esa inmutabilidad
     // es el argumento de transparencia sobre el dinero del comedor.
     match /pagos/{pagoId} {
+      function adminPuedeVerPagos(institucionId) {
+        return esAdminDe(institucionId)
+          && get(/databases/$(database)/documents/instituciones/$(institucionId))
+               .data.get(['permisosDelAdmin', 'verRegistroDePagos'], true) == true;
+      }
+
       allow get, list: if esPropietario(resource.data.usuarioId)
-        || esAdminDe(resource.data.institucionId);
+        || adminPuedeVerPagos(resource.data.institucionId);
       allow create: if esAdminDe(request.resource.data.institucionId)
         && request.resource.data.registradoPor == request.auth.uid
         && request.resource.data.fecha == request.time;

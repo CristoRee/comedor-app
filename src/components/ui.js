@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -220,6 +221,24 @@ export function Opcion({ titulo, detalle, onPress }) {
   );
 }
 
+export function Interruptor({ titulo, descripcion, valor, onCambiar, deshabilitado }) {
+  return (
+    <View style={estilos.interruptor}>
+      <View style={estilos.interruptorTextos}>
+        <Text style={estilos.interruptorTitulo}>{titulo}</Text>
+        {descripcion ? <Text style={estilos.interruptorDescripcion}>{descripcion}</Text> : null}
+      </View>
+      <Switch
+        value={Boolean(valor)}
+        onValueChange={onCambiar}
+        disabled={deshabilitado}
+        trackColor={{ false: colores.borde, true: colores.primario }}
+        accessibilityLabel={titulo}
+      />
+    </View>
+  );
+}
+
 export function Cargando({ texto }) {
   return (
     <View style={estilos.cargando}>
@@ -313,6 +332,23 @@ const estilos = StyleSheet.create({
   opcionTitulo: { fontSize: tipografia.cuerpo, fontWeight: '600', color: colores.texto },
   opcionDetalle: { fontSize: tipografia.nota, color: colores.textoSuave },
   opcionFlecha: { fontSize: 22, color: colores.textoSuave },
+
+  interruptor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: espaciado.md,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    borderRadius: radio.md,
+    paddingHorizontal: espaciado.md,
+    paddingVertical: espaciado.sm + 2,
+    minHeight: 56,
+  },
+  interruptorTextos: { flex: 1, gap: 2 },
+  interruptorTitulo: { fontSize: tipografia.cuerpo, fontWeight: '600', color: colores.texto },
+  interruptorDescripcion: { fontSize: tipografia.nota, color: colores.textoSuave },
 
   cargando: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: espaciado.md },
   cargandoTexto: { fontSize: tipografia.nota + 1, color: colores.textoSuave },

@@ -11,7 +11,7 @@ const SECCIONES_POR_ROL = {
   alumno: ['alumno'],
   cocinero: ['cocinero', 'comedor'],
   encargado: ['encargado', 'comedor'],
-  admin: ['admin', 'alumnos', 'comedor'],
+  admin: ['admin', 'alumnos', 'pagos', 'comedor'],
   superadmin: ['superadmin'],
 };
 

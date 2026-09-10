@@ -148,6 +148,39 @@ faltan subir, y cuántos de los que faltan son chicos y cuántos grandes. El
 contador central cambia solo de nombre durante el día según los horarios de la
 institución.
 
+## Cobros, precios y permisos
+
+**Los precios viven en la institución, no en el código.** El admin (o el
+superadmin) los carga una vez desde **Pagos → Ajustar precios**: ticket suelto,
+cuponera y mensualidad del internado. En la ficha del alumno, cada botón de
+cobro muestra el precio ya calculado, y la media beca aplica la mitad sola sobre
+tickets y cuponeras. La mensualidad del internado no lleva descuento.
+
+Un concepto sin precio cargado deja su botón deshabilitado: no se puede cobrar
+a ciegas.
+
+Cada cobro queda en `pagos`, que **no se puede editar ni borrar nunca**. Se
+guarda también el precio de lista del momento, así el historial sigue siendo
+legible aunque después cambien los precios.
+
+**El superadmin decide qué puede hacer el admin de cada institución.** Desde
+`/superadmin` se entra a cada institución y se activan o desactivan:
+
+| Permiso | Qué habilita |
+|---|---|
+| Ajustar precios | El admin puede cambiar los precios de su institución. |
+| Ver el registro de pagos | El admin ve el historial de cobros. |
+| Ver la pantalla del comedor | El admin ve los contadores del día. |
+
+Vienen los tres activados. Al desactivar uno, la opción desaparece de la vista
+del admin.
+
+> Los dos primeros están **verificados en las reglas de seguridad**, no solo
+> escondidos en la interfaz: con "Ajustar precios" apagado, el servidor rechaza
+> la escritura aunque la petición se mande a mano. "Ver la pantalla del comedor"
+> es solo de interfaz — es una preferencia de vista, y comprobarlo en el
+> servidor costaría una lectura extra en cada refresco de los contadores.
+
 ## Cómo se decide si un alumno puede comer
 
 En este orden: **internado con mensualidad al día → beca completa vigente →
@@ -216,6 +249,8 @@ Simulador de Play):
 - [ ] Un admin leyendo un usuario de otra institución → **denegado**.
 - [ ] Un admin cambiando `activa` o `nombre` de su institución → **denegado**.
 - [ ] Editar o borrar un documento de `pagos` → **denegado** siempre.
+- [ ] Un admin cambiando precios con el permiso desactivado → **denegado**.
+- [ ] Un admin cambiando `permisosDelAdmin` → **denegado**.
 - [ ] Un usuario sin sesión leyendo `usuarios` → **denegado**.
 
 `instituciones` es la única colección que se lee sin sesión, porque la app
@@ -238,9 +273,11 @@ app/
   encargado/manual.js     búsqueda por cédula
   admin/index.js          aprobación de registros
   alumnos/index.js        listado de alumnos
-  alumnos/[id].js         pagos, becas e internado
+  alumnos/[id].js         cobros, becas e internado
+  pagos/index.js          registro de pagos y ajuste de precios
   comedor.js              pantalla de contadores
   superadmin/index.js     catálogo nacional de instituciones
+  superadmin/[id].js      permisos y precios de una institución
 
 src/
   firebase.js             inicialización del SDK
@@ -255,6 +292,7 @@ src/
 
 scripts/
   crear-institucion.js    da de alta una institución
+  actualizar-instituciones.js  completa las instituciones ya creadas con campos nuevos
   asignar-rol.js          asigna rol e institución como custom claims
 
 firestore.rules           reglas de seguridad

@@ -5,26 +5,10 @@ import { db } from '../src/firebase';
 import { useAuth } from '../src/contexts/AuthContext';
 import { Aviso, Cargando, Pantalla } from '../src/components/ui';
 import { Navegacion } from '../src/components/Navegacion';
+import { navegacionDe } from '../src/permisos';
 import { claveDeFecha, edadEnAnios } from '../src/fechas';
 import { NOMBRE_COMIDA, comidaCentral, desayunoVisible } from '../src/comedor';
 import { colores, espaciado, radio, tipografia } from '../src/theme';
-
-const OPCIONES_POR_ROL = {
-  cocinero: [
-    { titulo: 'Menú', ruta: '/cocinero' },
-    { titulo: 'Comedor', ruta: '/comedor' },
-  ],
-  encargado: [
-    { titulo: 'Escáner', ruta: '/encargado' },
-    { titulo: 'Por cédula', ruta: '/encargado/manual' },
-    { titulo: 'Comedor', ruta: '/comedor' },
-  ],
-  admin: [
-    { titulo: 'Registros', ruta: '/admin' },
-    { titulo: 'Alumnos', ruta: '/alumnos' },
-    { titulo: 'Comedor', ruta: '/comedor' },
-  ],
-};
 
 function Contador({ titulo, valor, tamanio = 'grande', color }) {
   return (
@@ -125,7 +109,7 @@ export default function PantallaDelComedor() {
 
   return (
     <Pantalla scroll={false}>
-      <Navegacion opciones={OPCIONES_POR_ROL[rol] ?? []} />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
 

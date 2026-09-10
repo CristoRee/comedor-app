@@ -14,6 +14,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Campo, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
+import { navegacionDe } from '../../src/permisos';
 import { claveDeFecha, horaCorta } from '../../src/fechas';
 import { comidasDelSubrol, idAsistencia } from '../../src/comedor';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
@@ -21,7 +22,7 @@ import { formatoCedula, limpiarNumeros } from '../../src/validaciones';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
 
 export default function BusquedaManual() {
-  const { usuario, institucion, institucionId } = useAuth();
+  const { usuario, rol, institucion, institucionId } = useAuth();
   const [cedula, setCedula] = useState('');
   const [alumno, setAlumno] = useState(undefined);
   const [buscando, setBuscando] = useState(false);
@@ -126,13 +127,7 @@ export default function BusquedaManual() {
     <Pantalla>
       <Encabezado titulo="Buscar por cédula" nota={institucion?.nombre} />
 
-      <Navegacion
-        opciones={[
-          { titulo: 'Escáner', ruta: '/encargado' },
-          { titulo: 'Por cédula', ruta: '/encargado/manual' },
-          { titulo: 'Comedor', ruta: '/comedor' },
-        ]}
-      />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       <Aviso tipo="info">
         Para el alumno que se quedó sin batería o sin celular. Marca la entrada igual que el

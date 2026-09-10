@@ -15,6 +15,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
+import { navegacionDe } from '../../src/permisos';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
 
 function fechaCorta(marca) {
@@ -31,7 +32,7 @@ function Dato({ etiqueta, valor }) {
 }
 
 export default function Solicitudes() {
-  const { usuario, institucionId, institucion } = useAuth();
+  const { usuario, rol, institucionId, institucion } = useAuth();
   const [solicitudes, setSolicitudes] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [error, setError] = useState(null);
@@ -153,13 +154,7 @@ export default function Solicitudes() {
         }
       />
 
-      <Navegacion
-        opciones={[
-          { titulo: 'Registros', ruta: '/admin' },
-          { titulo: 'Alumnos', ruta: '/alumnos' },
-          { titulo: 'Comedor', ruta: '/comedor' },
-        ]}
-      />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       {!institucionId ? (
         <Aviso tipo="error" titulo="Sin institución asignada">

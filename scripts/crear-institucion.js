@@ -29,6 +29,19 @@ const CONFIGURACION_INICIAL = {
     mostrarDesayuno: true,
     mostrarChicoGrande: true,
   },
+  // Sin precio cargado no se puede cobrar: los pone el admin o el superadmin
+  // desde la app.
+  precios: {
+    ticket: null,
+    cuponera: null,
+    mensualidadInternado: null,
+  },
+  // Vienen todos activados; el superadmin los restringe por institución.
+  permisosDelAdmin: {
+    ajustarPrecios: true,
+    verRegistroDePagos: true,
+    verContadores: true,
+  },
 };
 
 const credencial = path.join(__dirname, 'service-account.json');
@@ -96,6 +109,7 @@ async function crear([id, nombre, departamento, ciudad, horaApertura]) {
   console.log(`  límite de cambio de menú  ${CONFIGURACION_INICIAL.horarios.horaLimiteMenu}`);
   console.log(`  corte chicos/grandes      ${CONFIGURACION_INICIAL.edadCorteChicoGrande} años`);
   console.log('  internado                 activo, 4 comidas');
+  console.log('  precios                   sin cargar (se ponen desde la app)');
 }
 
 const argumentos = process.argv.slice(2);

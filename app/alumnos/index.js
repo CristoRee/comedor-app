@@ -7,6 +7,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Campo, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
+import { navegacionDe } from '../../src/permisos';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
 import { limpiarNumeros } from '../../src/validaciones';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
@@ -32,7 +33,7 @@ function aplicarFiltro(alumno, filtro) {
 
 export default function ListadoDeAlumnos() {
   const router = useRouter();
-  const { institucionId, institucion } = useAuth();
+  const { rol, institucionId, institucion } = useAuth();
   const [alumnos, setAlumnos] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('todos');
@@ -93,13 +94,7 @@ export default function ListadoDeAlumnos() {
         nota={`${visibles.length} de ${alumnos.length}`}
       />
 
-      <Navegacion
-        opciones={[
-          { titulo: 'Registros', ruta: '/admin' },
-          { titulo: 'Alumnos', ruta: '/alumnos' },
-          { titulo: 'Comedor', ruta: '/comedor' },
-        ]}
-      />
+      <Navegacion opciones={navegacionDe(rol, institucion)} />
 
       <Campo
         etiqueta="Buscar"

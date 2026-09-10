@@ -15,11 +15,11 @@ import { db } from '../../src/firebase';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Aviso, Boton, Campo, Cargando, Pantalla } from '../../src/components/ui';
 import { fechaCorta } from '../../src/fechas';
-import { formatoFecha, parsearFecha } from '../../src/validaciones';
+import { parsearFecha, formatoFecha } from '../../src/validaciones';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
+import { permisoDelAdmin } from '../../src/permisos';
+import { CONCEPTOS, cobroDe, formatearMonto } from '../../src/precios';
 import { colores, espaciado, radio, tipografia } from '../../src/theme';
-
-const TICKETS_POR_CUPONERA = 20;
 
 function finDelMes(referencia = new Date()) {
   return new Date(referencia.getFullYear(), referencia.getMonth() + 1, 0, 23, 59, 59);
@@ -37,62 +37,63 @@ function Dato({ etiqueta, valor }) {
 export default function FichaDelAlumno() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { usuario, institucionId } = useAuth();
+  const { usuario, institucionId, institucion } = useAuth();
+
   const [alumno, setAlumno] = useState(undefined);
-  const [monto, setMonto] = useState('');
   const [becaDesde, setBecaDesde] = useState('');
   const [becaHasta, setBecaHasta] = useState('');
+  const [erroresBeca, setErroresBeca] = useState({});
   const [accion, setAccion] = useState(null);
   const [aviso, setAviso] = useState(null);
 
   useEffect(() => {
     return onSnapshot(
       doc(db, 'usuarios', id),
-      (instantanea) => setAlumno(instantanea.exists() ? { id: instantanea.id, ...instantanea.data() } : null),
+      (instantanea) =>
+        setAlumno(instantanea.exists() ? { id: instantanea.id, ...instantanea.data() } : null),
       () => setAlumno(null)
     );
   }, [id]);
 
-  function pedirConfirmacionDePago(tipo, etiqueta, ticketsOtorgados, cambiosEnUsuario) {
-    const valor = Number(monto.replace(',', '.'));
+  function revisarFechasDeBeca() {
+    const desde = parsearFecha(becaDesde);
+    const hasta = parsearFecha(becaHasta);
+    const fallos = {};
 
-    if (!monto.trim() || !Number.isFinite(valor) || valor < 0) {
-      setAviso({ tipo: 'error', texto: 'Escribí el monto cobrado antes de registrar.' });
-      return;
-    }
+    if (!becaDesde.trim()) fallos.desde = 'Campo obligatorio.';
+    else if (!desde) fallos.desde = 'Usá el formato dd/mm/aaaa.';
 
-    // El pago no se puede editar ni borrar después, así que se confirma antes.
-    Alert.alert(
-      'Confirmar cobro',
-      `${etiqueta} a ${alumno.nombre} ${alumno.apellido} por $ ${valor}.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Registrar', onPress: () => registrarPago(tipo, valor, ticketsOtorgados, cambiosEnUsuario) },
-      ]
-    );
+    if (!becaHasta.trim()) fallos.hasta = 'Campo obligatorio.';
+    else if (!hasta) fallos.hasta = 'Usá el formato dd/mm/aaaa.';
+    else if (desde && hasta <= desde) fallos.hasta = 'Tiene que ser posterior a la fecha de inicio.';
+
+    return { desde, hasta, fallos };
   }
 
-  async function registrarPago(tipo, valor, ticketsOtorgados, cambiosEnUsuario) {
-    setAccion(tipo);
+  async function registrarPago(concepto, cobro, cambiosEnUsuario) {
+    setAccion(concepto.tipo);
     setAviso(null);
 
     try {
       await updateDoc(doc(db, 'usuarios', id), cambiosEnUsuario);
 
-      // El pago es un registro de auditoría: se crea y no se modifica nunca más.
+      // El pago es un registro de auditoría: se crea y no se modifica nunca
+      // más. Se guarda el precio de lista del momento para que el historial
+      // siga siendo legible aunque después cambien los precios.
       await addDoc(collection(db, 'pagos'), {
         institucionId,
         usuarioId: id,
-        tipo,
-        monto: valor,
-        ticketsOtorgados,
-        descuentoAplicado: alumno.beca?.tipo === 'media' ? 'media_beca' : null,
+        usuarioNombre: `${alumno.nombre} ${alumno.apellido}`,
+        tipo: concepto.tipo,
+        monto: cobro.monto,
+        precioBase: cobro.precioBase,
+        ticketsOtorgados: concepto.tickets,
+        descuentoAplicado: cobro.descuentoAplicado,
         registradoPor: usuario.uid,
         fecha: serverTimestamp(),
       });
 
-      setMonto('');
-      setAviso({ tipo: 'exito', texto: 'Pago registrado.' });
+      setAviso({ tipo: 'exito', texto: `Cobro registrado: ${formatearMonto(cobro.monto)}.` });
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo registrar el pago. Revisá la conexión.' });
     } finally {
@@ -100,36 +101,26 @@ export default function FichaDelAlumno() {
     }
   }
 
-  async function asignarBeca(tipo) {
-    const desde = parsearFecha(becaDesde);
-    const hasta = parsearFecha(becaHasta);
+  function confirmarCobro(concepto) {
+    const cobro = cobroDe(institucion, alumno, concepto);
 
-    if (!desde || !hasta) {
-      setAviso({ tipo: 'error', texto: 'Las fechas de la beca van en formato dd/mm/aaaa.' });
-      return;
-    }
+    const cambiosEnUsuario =
+      concepto.tipo === 'mensualidad_internado'
+        ? { internado: { activo: true, mensualidadHasta: Timestamp.fromDate(finDelMes()) } }
+        : { tickets: increment(concepto.tickets) };
 
-    if (hasta <= desde) {
-      setAviso({ tipo: 'error', texto: 'La fecha de fin tiene que ser posterior a la de inicio.' });
-      return;
-    }
+    const detalle =
+      cobro.descuentoAplicado === 'media_beca'
+        ? `${concepto.titulo} a ${alumno.nombre} ${alumno.apellido} por ${formatearMonto(cobro.monto)} (media beca sobre ${formatearMonto(cobro.precioBase)}).`
+        : `${concepto.titulo} a ${alumno.nombre} ${alumno.apellido} por ${formatearMonto(cobro.monto)}.`;
 
-    setAccion(`beca_${tipo}`);
-    setAviso(null);
-
-    try {
-      await updateDoc(doc(db, 'usuarios', id), {
-        beca: { tipo, desde: Timestamp.fromDate(desde), hasta: Timestamp.fromDate(hasta) },
-      });
-      setAviso({ tipo: 'exito', texto: 'Beca asignada.' });
-    } catch {
-      setAviso({ tipo: 'error', texto: 'No se pudo asignar la beca.' });
-    } finally {
-      setAccion(null);
-    }
+    Alert.alert('Confirmar cobro', detalle, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Registrar', onPress: () => registrarPago(concepto, cobro, cambiosEnUsuario) },
+    ]);
   }
 
-  async function cambiar(clave, cambios, mensaje) {
+  async function aplicarCambio(clave, cambios, mensaje) {
     setAccion(clave);
     setAviso(null);
 
@@ -141,6 +132,65 @@ export default function FichaDelAlumno() {
     } finally {
       setAccion(null);
     }
+  }
+
+  function confirmarBeca(tipo) {
+    const { desde, hasta, fallos } = revisarFechasDeBeca();
+
+    setErroresBeca(fallos);
+    if (Object.keys(fallos).length) return;
+
+    const nombre = tipo === 'completa' ? 'beca completa' : 'media beca';
+
+    Alert.alert(
+      'Confirmar beca',
+      `Dar ${nombre} a ${alumno.nombre} ${alumno.apellido}, del ${fechaCorta(desde)} al ${fechaCorta(hasta)}.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Asignar',
+          onPress: () =>
+            aplicarCambio(
+              `beca_${tipo}`,
+              { beca: { tipo, desde: Timestamp.fromDate(desde), hasta: Timestamp.fromDate(hasta) } },
+              `${nombre.charAt(0).toUpperCase() + nombre.slice(1)} asignada.`
+            ),
+        },
+      ]
+    );
+  }
+
+  function confirmarQuitarBeca() {
+    Alert.alert('Quitar la beca', `¿Quitarle la beca a ${alumno.nombre} ${alumno.apellido}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Quitar',
+        style: 'destructive',
+        onPress: () => aplicarCambio('quitar_beca', { beca: null }, 'Beca quitada.'),
+      },
+    ]);
+  }
+
+  function confirmarInternado(esInterno) {
+    const detalle = esInterno
+      ? `${alumno.nombre} ${alumno.apellido} deja de figurar en el internado y pierde la mensualidad cargada.`
+      : `${alumno.nombre} ${alumno.apellido} pasa a figurar en el internado y podrá marcar las comidas habilitadas.`;
+
+    Alert.alert(esInterno ? 'Sacar del internado' : 'Marcar como internado', detalle, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: esInterno ? 'Sacar' : 'Marcar',
+        style: esInterno ? 'destructive' : 'default',
+        onPress: () =>
+          aplicarCambio(
+            'internado',
+            esInterno
+              ? { subrol: null, internado: null }
+              : { subrol: 'internado', internado: { activo: true, mensualidadHasta: null } },
+            esInterno ? 'Ya no figura en el internado.' : 'Quedó marcado como alumno del internado.'
+          ),
+      },
+    ]);
   }
 
   if (alumno === undefined) {
@@ -164,6 +214,9 @@ export default function FichaDelAlumno() {
 
   const acceso = evaluarAcceso(alumno);
   const esInterno = alumno.subrol === 'internado';
+  const conceptosVisibles = CONCEPTOS.filter((concepto) => !concepto.soloInternado || esInterno);
+  const puedeVerPagos = permisoDelAdmin(institucion, 'verRegistroDePagos');
+  const puedeAjustarPrecios = permisoDelAdmin(institucion, 'ajustarPrecios');
 
   return (
     <Pantalla>
@@ -205,55 +258,49 @@ export default function FichaDelAlumno() {
 
       <Text style={estilos.seccion}>Registrar un pago</Text>
 
-      <Campo
-        etiqueta="Monto cobrado"
-        value={monto}
-        onChangeText={setMonto}
-        keyboardType="decimal-pad"
-        placeholder="0"
-        ayuda={
-          alumno.beca?.tipo === 'media'
-            ? 'Tiene media beca: cobrale la mitad. Queda registrado como descuento.'
-            : 'Queda guardado en el historial de pagos, que no se puede editar ni borrar.'
-        }
-      />
+      {conceptosVisibles.map((concepto) => {
+        const cobro = cobroDe(institucion, alumno, concepto);
+        const sinPrecio = cobro.monto === null;
 
-      <Boton
-        titulo="Cobrar 1 ticket"
-        onPress={() =>
-          pedirConfirmacionDePago('ticket', 'Cobrar 1 ticket', 1, { tickets: increment(1) })
-        }
-        cargando={accion === 'ticket'}
-        deshabilitado={Boolean(accion)}
-      />
+        return (
+          <View key={concepto.tipo} style={estilos.concepto}>
+            <Boton
+              titulo={
+                sinPrecio
+                  ? `${concepto.titulo} — sin precio`
+                  : `${concepto.titulo} — ${formatearMonto(cobro.monto)}`
+              }
+              onPress={() => confirmarCobro(concepto)}
+              cargando={accion === concepto.tipo}
+              deshabilitado={sinPrecio || Boolean(accion)}
+            />
+            {cobro.descuentoAplicado === 'media_beca' ? (
+              <Text style={estilos.notaConcepto}>
+                {`Media beca: la mitad de ${formatearMonto(cobro.precioBase)}.`}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
 
-      <Boton
-        titulo={`Cobrar cuponera (${TICKETS_POR_CUPONERA} tickets)`}
-        onPress={() =>
-          pedirConfirmacionDePago(
-            'cuponera',
-            `Cobrar una cuponera de ${TICKETS_POR_CUPONERA} tickets`,
-            TICKETS_POR_CUPONERA,
-            { tickets: increment(TICKETS_POR_CUPONERA) }
-          )
-        }
-        cargando={accion === 'cuponera'}
-        deshabilitado={Boolean(accion)}
-      />
+      {conceptosVisibles.some((concepto) => cobroDe(institucion, alumno, concepto).monto === null) ? (
+        <Aviso tipo="advertencia" titulo="Faltan precios">
+          {puedeAjustarPrecios
+            ? 'Cargalos desde Pagos → Ajustar precios para poder cobrar.'
+            : 'Pedile al administrador del sistema que cargue los precios de tu institución.'}
+        </Aviso>
+      ) : null}
 
-      {esInterno ? (
+      {puedeVerPagos ? (
         <Boton
-          titulo="Cobrar mensualidad del internado"
+          titulo="Ver historial de pagos"
+          variante="secundario"
           onPress={() =>
-            pedirConfirmacionDePago(
-              'mensualidad_internado',
-              `Cobrar la mensualidad hasta el ${fechaCorta(finDelMes())}`,
-              0,
-              { internado: { activo: true, mensualidadHasta: Timestamp.fromDate(finDelMes()) } }
-            )
+            router.push({
+              pathname: '/pagos',
+              params: { usuarioId: id, usuarioNombre: `${alumno.nombre} ${alumno.apellido}` },
+            })
           }
-          cargando={accion === 'mensualidad_internado'}
-          deshabilitado={Boolean(accion)}
         />
       ) : null}
 
@@ -262,32 +309,40 @@ export default function FichaDelAlumno() {
       <Campo
         etiqueta="Desde"
         value={becaDesde}
-        onChangeText={setBecaDesde}
+        onChangeText={(valor) => {
+          setBecaDesde(valor);
+          setErroresBeca((previos) => ({ ...previos, desde: null }));
+        }}
+        error={erroresBeca.desde}
         formato={formatoFecha}
         keyboardType="number-pad"
         placeholder="dd/mm/aaaa"
-        maxLength={10}
       />
+
       <Campo
         etiqueta="Hasta"
         value={becaHasta}
-        onChangeText={setBecaHasta}
+        onChangeText={(valor) => {
+          setBecaHasta(valor);
+          setErroresBeca((previos) => ({ ...previos, hasta: null }));
+        }}
+        error={erroresBeca.hasta}
         formato={formatoFecha}
         keyboardType="number-pad"
         placeholder="dd/mm/aaaa"
-        maxLength={10}
       />
 
       <Boton
         titulo="Dar beca completa"
-        onPress={() => asignarBeca('completa')}
+        onPress={() => confirmarBeca('completa')}
         cargando={accion === 'beca_completa'}
         deshabilitado={Boolean(accion)}
       />
+
       <Boton
         titulo="Dar media beca"
         variante="secundario"
-        onPress={() => asignarBeca('media')}
+        onPress={() => confirmarBeca('media')}
         cargando={accion === 'beca_media'}
         deshabilitado={Boolean(accion)}
       />
@@ -296,18 +351,9 @@ export default function FichaDelAlumno() {
         <Boton
           titulo="Quitar la beca"
           variante="peligro"
+          onPress={confirmarQuitarBeca}
           cargando={accion === 'quitar_beca'}
           deshabilitado={Boolean(accion)}
-          onPress={() =>
-            Alert.alert('Quitar la beca', `¿Quitarle la beca a ${alumno.nombre}?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              {
-                text: 'Quitar',
-                style: 'destructive',
-                onPress: () => cambiar('quitar_beca', { beca: null }, 'Beca quitada.'),
-              },
-            ])
-          }
         />
       ) : null}
 
@@ -316,17 +362,9 @@ export default function FichaDelAlumno() {
       <Boton
         titulo={esInterno ? 'Sacar del internado' : 'Marcar como alumno del internado'}
         variante="secundario"
+        onPress={() => confirmarInternado(esInterno)}
         cargando={accion === 'internado'}
         deshabilitado={Boolean(accion)}
-        onPress={() =>
-          cambiar(
-            'internado',
-            esInterno
-              ? { subrol: null, internado: null }
-              : { subrol: 'internado', internado: { activo: true, mensualidadHasta: null } },
-            esInterno ? 'Ya no figura en el internado.' : 'Quedó marcado como alumno del internado.'
-          )
-        }
       />
     </Pantalla>
   );
@@ -358,4 +396,6 @@ const estilos = StyleSheet.create({
     color: colores.texto,
     marginTop: espaciado.sm,
   },
+  concepto: { gap: espaciado.xs },
+  notaConcepto: { fontSize: tipografia.nota, color: colores.advertencia },
 });
