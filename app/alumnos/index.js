@@ -10,7 +10,8 @@ import { Navegacion } from '../../src/components/Navegacion';
 import { navegacionDe } from '../../src/permisos';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
 import { limpiarNumeros } from '../../src/validaciones';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const FILTROS = [
   { clave: 'todos', titulo: 'Todos' },
@@ -32,6 +33,7 @@ function aplicarFiltro(alumno, filtro) {
 }
 
 export default function ListadoDeAlumnos() {
+  const estilos = useEstilos(crearEstilos);
   const router = useRouter();
   const { rol, institucionId, institucion } = useAuth();
   const [alumnos, setAlumnos] = useState(null);
@@ -155,7 +157,8 @@ export default function ListadoDeAlumnos() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.sm, paddingBottom: espaciado.lg },
   filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: espaciado.xs },
@@ -167,9 +170,9 @@ const estilos = StyleSheet.create({
     borderColor: colores.borde,
     backgroundColor: colores.superficie,
   },
-  filtroActivo: { backgroundColor: colores.texto, borderColor: colores.texto },
+  filtroActivo: { backgroundColor: colores.destacado, borderColor: colores.destacado },
   filtroTexto: { fontSize: tipografia.nota, color: colores.texto, fontWeight: '600' },
-  filtroTextoActivo: { color: '#ffffff' },
+  filtroTextoActivo: { color: colores.destacadoTexto },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +183,7 @@ const estilos = StyleSheet.create({
     borderColor: colores.borde,
     padding: espaciado.md,
   },
-  filaPresionada: { backgroundColor: '#eef2f7' },
+  filaPresionada: { backgroundColor: colores.presionado },
   filaTextos: { flex: 1, gap: 2 },
   nombre: { fontSize: tipografia.cuerpo, fontWeight: '600', color: colores.texto },
   ci: { fontSize: tipografia.nota, color: colores.textoSuave },

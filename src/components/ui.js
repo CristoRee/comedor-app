@@ -14,11 +14,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colores, espaciado, radio, tipografia } from '../theme';
+import { espaciado, radio, tipografia } from '../theme';
+import { useEstilos, useTema } from '../contexts/TemaContext';
 
 const ContextoDePantalla = createContext(null);
 
 export function Pantalla({ children, scroll = true, contentContainerStyle, bordes = ['top', 'bottom'] }) {
+  const estilos = useEstilos(crearEstilos);
   const referenciaScroll = useRef(null);
   const campoEnfocado = useRef(null);
   const { height: altoDeVentana } = useWindowDimensions();
@@ -95,10 +97,12 @@ export function Pantalla({ children, scroll = true, contentContainerStyle, borde
 }
 
 export function Titulo({ children }) {
+  const estilos = useEstilos(crearEstilos);
   return <Text style={estilos.titulo}>{children}</Text>;
 }
 
 export function Subtitulo({ children }) {
+  const estilos = useEstilos(crearEstilos);
   return <Text style={estilos.subtitulo}>{children}</Text>;
 }
 
@@ -116,6 +120,8 @@ export const Campo = forwardRef(function Campo(
   },
   ref
 ) {
+  const estilos = useEstilos(crearEstilos);
+  const { colores } = useTema();
   const [oculto, setOculto] = useState(Boolean(secureTextEntry));
   const [posicion, setPosicion] = useState(0);
   const contexto = useContext(ContextoDePantalla);
@@ -170,6 +176,8 @@ export const Campo = forwardRef(function Campo(
 });
 
 export function Boton({ titulo, onPress, cargando, deshabilitado, variante = 'primario' }) {
+  const estilos = useEstilos(crearEstilos);
+  const { colores } = useTema();
   const inactivo = cargando || deshabilitado;
 
   return (
@@ -187,7 +195,7 @@ export function Boton({ titulo, onPress, cargando, deshabilitado, variante = 'pr
       ]}
     >
       {cargando ? (
-        <ActivityIndicator color={variante === 'primario' ? '#ffffff' : colores.primario} />
+        <ActivityIndicator color={variante === 'secundario' ? colores.primario : colores.destacadoTexto} />
       ) : (
         <Text style={[estilos.botonTexto, estilos[`botonTexto_${variante}`]]}>{titulo}</Text>
       )}
@@ -196,6 +204,7 @@ export function Boton({ titulo, onPress, cargando, deshabilitado, variante = 'pr
 }
 
 export function Aviso({ tipo = 'info', titulo, children }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={[estilos.aviso, estilos[`aviso_${tipo}`]]} accessibilityRole="alert">
       {titulo ? <Text style={[estilos.avisoTitulo, estilos[`avisoTexto_${tipo}`]]}>{titulo}</Text> : null}
@@ -205,6 +214,7 @@ export function Aviso({ tipo = 'info', titulo, children }) {
 }
 
 export function Opcion({ titulo, detalle, onPress }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <Pressable
       onPress={onPress}
@@ -222,6 +232,8 @@ export function Opcion({ titulo, detalle, onPress }) {
 }
 
 export function Interruptor({ titulo, descripcion, valor, onCambiar, deshabilitado }) {
+  const estilos = useEstilos(crearEstilos);
+  const { colores } = useTema();
   return (
     <View style={estilos.interruptor}>
       <View style={estilos.interruptorTextos}>
@@ -240,6 +252,8 @@ export function Interruptor({ titulo, descripcion, valor, onCambiar, deshabilita
 }
 
 export function Cargando({ texto }) {
+  const estilos = useEstilos(crearEstilos);
+  const { colores } = useTema();
   return (
     <View style={estilos.cargando}>
       <ActivityIndicator size="large" color={colores.primario} />
@@ -248,7 +262,8 @@ export function Cargando({ texto }) {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   scroll: { flexGrow: 1, padding: espaciado.lg, gap: espaciado.md },
@@ -298,18 +313,18 @@ const estilos = StyleSheet.create({
   botonPresionado: { opacity: 0.75 },
   botonInactivo: { opacity: 0.55 },
   botonTexto: { fontSize: tipografia.cuerpo, fontWeight: '600' },
-  botonTexto_primario: { color: '#ffffff' },
+  botonTexto_primario: { color: colores.destacadoTexto },
   botonTexto_secundario: { color: colores.texto },
-  botonTexto_peligro: { color: '#ffffff' },
+  botonTexto_peligro: { color: colores.destacadoTexto },
 
   aviso: { borderRadius: radio.md, padding: espaciado.md, gap: espaciado.xs },
-  aviso_info: { backgroundColor: '#e8f0fe' },
-  aviso_error: { backgroundColor: '#fde8e6' },
-  aviso_exito: { backgroundColor: '#e3f3e9' },
-  aviso_advertencia: { backgroundColor: '#fdf1dd' },
+  aviso_info: { backgroundColor: colores.avisoInfo },
+  aviso_error: { backgroundColor: colores.avisoError },
+  aviso_exito: { backgroundColor: colores.avisoExito },
+  aviso_advertencia: { backgroundColor: colores.avisoAdvertencia },
   avisoTitulo: { fontSize: tipografia.cuerpo, fontWeight: '700' },
   avisoTexto: { fontSize: tipografia.nota + 1, lineHeight: 20 },
-  avisoTexto_info: { color: '#0b3d91' },
+  avisoTexto_info: { color: colores.avisoInfoTexto },
   avisoTexto_error: { color: colores.error },
   avisoTexto_exito: { color: colores.exito },
   avisoTexto_advertencia: { color: colores.advertencia },
@@ -327,7 +342,7 @@ const estilos = StyleSheet.create({
     paddingVertical: espaciado.md,
     minHeight: 56,
   },
-  opcionPresionada: { backgroundColor: '#eef2f7' },
+  opcionPresionada: { backgroundColor: colores.presionado },
   opcionTextos: { flex: 1, gap: 2 },
   opcionTitulo: { fontSize: tipografia.cuerpo, fontWeight: '600', color: colores.texto },
   opcionDetalle: { fontSize: tipografia.nota, color: colores.textoSuave },

@@ -10,7 +10,8 @@ import { Encabezado } from '../../src/components/Encabezado';
 import { claveDeFecha, fechaLegible, horaCorta } from '../../src/fechas';
 import { comidasDelSubrol, idAsistencia, idMenu } from '../../src/comedor';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { FIJOS, espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const ETIQUETA_COMIDA = {
   desayuno: 'Desayuno',
@@ -20,6 +21,7 @@ const ETIQUETA_COMIDA = {
 };
 
 function Plato({ titulo, nombre, ingredientes }) {
+  const estilos = useEstilos(crearEstilos);
   const [abierto, setAbierto] = useState(false);
 
   if (!nombre) return null;
@@ -44,6 +46,7 @@ function Plato({ titulo, nombre, ingredientes }) {
 }
 
 export default function InicioAlumno() {
+  const estilos = useEstilos(crearEstilos);
   const { usuario, perfil, institucionId, institucion } = useAuth();
   const [menu, setMenu] = useState(undefined);
   const [asistencia, setAsistencia] = useState(undefined);
@@ -225,7 +228,12 @@ export default function InicioAlumno() {
           <View style={estilos.tarjetaQr}>
             <Text style={estilos.qrTitulo}>Mostrá este código al subir</Text>
             <View style={estilos.qr}>
-              <QRCode value={contenidoQr} size={220} backgroundColor="#ffffff" />
+              <QRCode
+                value={contenidoQr}
+                size={220}
+                color={FIJOS.qrTinta}
+                backgroundColor={FIJOS.qrFondo}
+              />
             </View>
             <Text style={estilos.qrPie}>
               {`Te esperamos a las ${institucion?.horarios?.horaAperturaComedor ?? '11:30'}.`}
@@ -281,7 +289,8 @@ export default function InicioAlumno() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   tarjeta: {
     backgroundColor: colores.superficie,
     borderRadius: radio.lg,
@@ -328,7 +337,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   casillaMarcada: { backgroundColor: colores.primario, borderColor: colores.primario },
-  tilde: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  tilde: { color: colores.destacadoTexto, fontSize: 15, fontWeight: '700' },
   comidaTexto: { fontSize: tipografia.cuerpo, color: colores.texto },
 
   tarjetaQr: {
@@ -341,7 +350,7 @@ const estilos = StyleSheet.create({
     gap: espaciado.md,
   },
   qrTitulo: { fontSize: tipografia.cuerpo, fontWeight: '700', color: colores.texto },
-  qr: { padding: espaciado.md, backgroundColor: '#ffffff', borderRadius: radio.md },
+  qr: { padding: espaciado.md, backgroundColor: FIJOS.qrFondo, borderRadius: radio.md },
   qrPie: { fontSize: tipografia.nota, color: colores.textoSuave },
   nota: { fontSize: tipografia.nota, color: colores.textoSuave, textAlign: 'center' },
 });

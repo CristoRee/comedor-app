@@ -5,8 +5,10 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../src/firebase';
 import { Aviso, Cargando, Opcion, Pantalla, Subtitulo, Titulo } from '../../src/components/ui';
 import { espaciado } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 export default function ElegirInstitucion() {
+  const estilos = useEstilos(crearEstilos);
   const { departamento } = useLocalSearchParams();
   const router = useRouter();
   const [instituciones, setInstituciones] = useState(null);
@@ -87,7 +89,8 @@ export default function ElegirInstitucion() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.sm, paddingBottom: espaciado.lg },
 });

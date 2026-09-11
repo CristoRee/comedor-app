@@ -16,13 +16,15 @@ import { Aviso, Boton, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { Navegacion } from '../../src/components/Navegacion';
 import { navegacionDe } from '../../src/permisos';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 function fechaCorta(marca) {
   return marca?.toDate ? marca.toDate().toLocaleDateString('es-UY') : '—';
 }
 
 function Dato({ etiqueta, valor }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={estilos.dato}>
       <Text style={estilos.datoEtiqueta}>{etiqueta}</Text>
@@ -32,6 +34,7 @@ function Dato({ etiqueta, valor }) {
 }
 
 export default function Solicitudes() {
+  const estilos = useEstilos(crearEstilos);
   const { usuario, rol, institucionId, institucion } = useAuth();
   const [solicitudes, setSolicitudes] = useState(null);
   const [procesando, setProcesando] = useState(null);
@@ -214,7 +217,8 @@ export default function Solicitudes() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.md, paddingBottom: espaciado.lg },
   tarjeta: {

@@ -1,8 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
-import { colores, espaciado, radio, tipografia } from '../theme';
+import { espaciado, radio, tipografia } from '../theme';
+import { useEstilos } from '../contexts/TemaContext';
 
 export function Navegacion({ opciones }) {
+  const estilos = useEstilos(crearEstilos);
   const router = useRouter();
   const segmentos = useSegments();
   const actual = `/${segmentos.join('/')}`;
@@ -30,7 +32,8 @@ export function Navegacion({ opciones }) {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   barra: { flexDirection: 'row', gap: espaciado.sm },
   pestania: {
     flex: 1,
@@ -44,5 +47,5 @@ const estilos = StyleSheet.create({
   pestaniaActiva: { backgroundColor: colores.primario, borderColor: colores.primario },
   pestaniaPresionada: { opacity: 0.75 },
   texto: { fontSize: tipografia.nota + 1, fontWeight: '600', color: colores.texto },
-  textoActivo: { color: '#ffffff' },
+  textoActivo: { color: colores.destacadoTexto },
 });

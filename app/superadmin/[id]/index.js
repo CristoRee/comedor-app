@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db } from '../../src/firebase';
-import { Aviso, Boton, Campo, Cargando, Interruptor, Pantalla } from '../../src/components/ui';
-import { PERMISOS_DEL_ADMIN, permisosDeLaInstitucion } from '../../src/permisos';
-import { CONCEPTOS, normalizarPrecio, precioDe } from '../../src/precios';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { db } from '../../../src/firebase';
+import { Aviso, Boton, Campo, Cargando, Interruptor, Pantalla } from '../../../src/components/ui';
+import { PERMISOS_DEL_ADMIN, permisosDeLaInstitucion } from '../../../src/permisos';
+import { CONCEPTOS, normalizarPrecio, precioDe } from '../../../src/precios';
+import { espaciado, radio, tipografia } from '../../../src/theme';
+import { useEstilos } from '../../../src/contexts/TemaContext';
 
 const CAMPOS_DE_PRECIO = CONCEPTOS.map((concepto) => ({
   clave: concepto.clavePrecio,
@@ -14,6 +15,7 @@ const CAMPOS_DE_PRECIO = CONCEPTOS.map((concepto) => ({
 }));
 
 function Dato({ etiqueta, valor }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={estilos.dato}>
       <Text style={estilos.datoEtiqueta}>{etiqueta}</Text>
@@ -23,6 +25,7 @@ function Dato({ etiqueta, valor }) {
 }
 
 export default function ConfiguracionDeInstitucion() {
+  const estilos = useEstilos(crearEstilos);
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
@@ -169,6 +172,12 @@ export default function ConfiguracionDeInstitucion() {
 
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
 
+      <Boton
+        titulo="Ver usuarios de esta institución"
+        variante="secundario"
+        onPress={() => router.push(`/superadmin/${id}/usuarios`)}
+      />
+
       <Text style={estilos.seccion}>Estado en el catálogo</Text>
 
       <Boton
@@ -227,7 +236,8 @@ export default function ConfiguracionDeInstitucion() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   volver: { fontSize: tipografia.cuerpo, color: colores.primario, fontWeight: '600' },
   nombre: { fontSize: tipografia.titulo - 4, fontWeight: '700', color: colores.texto },
   tarjeta: {

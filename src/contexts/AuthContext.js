@@ -9,8 +9,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
-  const [rol, setRol] = useState('alumno');
-  const [institucionDelClaim, setInstitucionDelClaim] = useState(null);
+  const [esSuperadmin, setEsSuperadmin] = useState(false);
   const [perfil, setPerfil] = useState(null);
   const [institucion, setInstitucion] = useState(null);
   const [sesionResuelta, setSesionResuelta] = useState(false);
@@ -21,18 +20,17 @@ export function AuthProvider({ children }) {
       if (!cuenta) {
         setUsuario(null);
         setPerfil(null);
-        setRol('alumno');
-        setInstitucionDelClaim(null);
+        setEsSuperadmin(false);
         setPerfilResuelto(true);
         setSesionResuelta(true);
         return;
       }
 
-      // El rol y la institución del personal viven en los custom claims del
-      // token. Sin claim asignado, alumno.
+      // Solo el superadmin viene del claim: es el rol que reparte todos los
+      // demás, y un claim no se puede escribir desde la app. El resto sale del
+      // documento, así un cambio de rol se aplica sin cerrar sesión.
       const { claims } = await cuenta.getIdTokenResult();
-      setRol(ROLES.includes(claims.rol) ? claims.rol : 'alumno');
-      setInstitucionDelClaim(claims.institucionId ?? null);
+      setEsSuperadmin(claims.rol === 'superadmin');
       setPerfilResuelto(false);
       setUsuario(cuenta);
       setSesionResuelta(true);
@@ -57,9 +55,14 @@ export function AuthProvider({ children }) {
     );
   }, [usuario]);
 
-  // El alumno pertenece a la institución que eligió al registrarse; el personal,
-  // a la que le asignaron en el claim.
-  const institucionId = rol === 'alumno' ? perfil?.institucionId ?? null : institucionDelClaim;
+  // El superadmin es nacional: no pertenece a ninguna institución.
+  const rol = esSuperadmin
+    ? 'superadmin'
+    : ROLES.includes(perfil?.rol) && perfil.rol !== 'superadmin'
+      ? perfil.rol
+      : 'alumno';
+
+  const institucionId = esSuperadmin ? null : perfil?.institucionId ?? null;
 
   useEffect(() => {
     if (!institucionId) {
@@ -84,10 +87,10 @@ export function AuthProvider({ children }) {
       institucionId,
       institucion,
       cargando: !sesionResuelta || !perfilResuelto,
-      estado: perfil?.estado ?? 'pendiente',
+      estado: esSuperadmin ? 'activo' : perfil?.estado ?? 'pendiente',
       cerrarSesion,
     }),
-    [usuario, perfil, rol, institucionId, institucion, sesionResuelta, perfilResuelto, cerrarSesion]
+    [usuario, perfil, rol, esSuperadmin, institucionId, institucion, sesionResuelta, perfilResuelto, cerrarSesion]
   );
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;

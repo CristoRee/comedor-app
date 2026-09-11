@@ -19,9 +19,11 @@ import { claveDeFecha, horaCorta } from '../../src/fechas';
 import { comidasDelSubrol, idAsistencia } from '../../src/comedor';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
 import { formatoCedula, limpiarNumeros } from '../../src/validaciones';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 export default function BusquedaManual() {
+  const estilos = useEstilos(crearEstilos);
   const { usuario, rol, institucion, institucionId } = useAuth();
   const [cedula, setCedula] = useState('');
   const [alumno, setAlumno] = useState(undefined);
@@ -175,7 +177,8 @@ export default function BusquedaManual() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   tarjeta: {
     backgroundColor: colores.superficie,
     borderRadius: radio.lg,

@@ -1,7 +1,9 @@
 import { Stack } from 'expo-router';
-import { colores } from '../../src/theme';
+import { useTema } from '../../src/contexts/TemaContext';
 
 export default function LayoutRegistro() {
+  const { colores } = useTema();
+
   return (
     <Stack
       screenOptions={{

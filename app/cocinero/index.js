@@ -9,7 +9,8 @@ import { Navegacion } from '../../src/components/Navegacion';
 import { navegacionDe } from '../../src/permisos';
 import { claveDeFecha, fechaLegible } from '../../src/fechas';
 import { idMenu } from '../../src/comedor';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const PLATO_VACIO = { nombre: '', ingredientes: '' };
 
@@ -31,6 +32,7 @@ function manana() {
 }
 
 export default function MenuDelDia() {
+  const estilos = useEstilos(crearEstilos);
   const { usuario, perfil, rol, institucionId, institucion } = useAuth();
   const [dia, setDia] = useState('hoy');
   const [principal, setPrincipal] = useState(PLATO_VACIO);
@@ -234,7 +236,8 @@ export default function MenuDelDia() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   selectorDia: { flexDirection: 'row', gap: espaciado.sm },
   dia: {
     flex: 1,
@@ -245,9 +248,9 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colores.superficie,
   },
-  diaActivo: { backgroundColor: colores.texto, borderColor: colores.texto },
+  diaActivo: { backgroundColor: colores.destacado, borderColor: colores.destacado },
   diaTexto: { fontSize: tipografia.nota + 1, fontWeight: '600', color: colores.texto },
-  diaTextoActivo: { color: '#ffffff' },
+  diaTextoActivo: { color: colores.destacadoTexto },
   fecha: { fontSize: tipografia.nota + 1, color: colores.textoSuave, textTransform: 'capitalize' },
   seccion: {
     fontSize: tipografia.subtitulo,
@@ -259,7 +262,7 @@ const estilos = StyleSheet.create({
     gap: espaciado.sm,
     padding: espaciado.md,
     borderRadius: radio.md,
-    backgroundColor: '#eef1f5',
+    backgroundColor: colores.superficieAlterna,
   },
   quitar: { fontSize: tipografia.nota, color: colores.error, fontWeight: '600' },
 });

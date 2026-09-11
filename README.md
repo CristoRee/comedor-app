@@ -251,6 +251,10 @@ Simulador de Play):
 - [ ] Editar o borrar un documento de `pagos` → **denegado** siempre.
 - [ ] Un admin cambiando precios con el permiso desactivado → **denegado**.
 - [ ] Un admin cambiando `permisosDelAdmin` → **denegado**.
+- [ ] Un alumno poniéndose `rol: 'admin'` en su propio documento → **denegado**.
+- [ ] Un admin cambiando el `rol` de cualquiera → **denegado**.
+- [ ] Un admin ascendiéndose a `superadmin` → **denegado**.
+- [ ] Un alumno cambiando algo que no sea su `fotoPerfil` → **denegado**.
 - [ ] Un usuario sin sesión leyendo `usuarios` → **denegado**.
 
 `instituciones` es la única colección que se lee sin sesión, porque la app
@@ -276,8 +280,12 @@ app/
   alumnos/[id].js         cobros, becas e internado
   pagos/index.js          registro de pagos y ajuste de precios
   comedor.js              pantalla de contadores
+  perfil.js               datos, foto y apariencia (todos los roles)
   superadmin/index.js     catálogo nacional de instituciones
-  superadmin/[id].js      permisos y precios de una institución
+  superadmin/nueva.js     alta de una institución
+  superadmin/[id]/index.js     permisos y precios
+  superadmin/[id]/usuarios.js  usuarios de esa institución
+  superadmin/[id]/usuario.js   alta y edición de un usuario
 
 src/
   firebase.js             inicialización del SDK
@@ -293,7 +301,8 @@ src/
 scripts/
   crear-institucion.js    da de alta una institución
   actualizar-instituciones.js  completa las instituciones ya creadas con campos nuevos
-  asignar-rol.js          asigna rol e institución como custom claims
+  asignar-rol.js          asigna rol e institución
+  limpiar-cuentas.js      borra cuentas de Auth que ya no tienen ficha
 
 firestore.rules           reglas de seguridad
 eas.json                  perfil de build del APK del piloto
@@ -301,22 +310,65 @@ eas.json                  perfil de build del APK del piloto
 
 ## Detalle sobre los roles
 
-El rol y la institución del personal viven en los **custom claims** de Firebase
-Auth, no en Firestore. El campo `rol` del documento de usuario es solo una copia
-informativa para mostrarlo en listas: no da ningún permiso.
+Hay dos niveles, a propósito:
 
-Un usuario sin claim asignado se trata como **alumno** por defecto. Solo el
-personal recibe un claim explícito, y eso evita correr el script por cada
-estudiante que se registre.
+- **`superadmin`** vive en un *custom claim* del token de Firebase Auth. Un claim
+  solo se puede escribir con el Admin SDK, desde una máquina con
+  `service-account.json`. Nadie se lo puede dar a sí mismo desde la app, pase lo
+  que pase. Es el rol que reparte todos los demás, así que es el que más
+  protegido tiene que estar.
+- **`alumno`, `cocinero`, `encargado`, `admin`** viven en el campo `rol` del
+  documento del usuario, y **solo el superadmin los puede cambiar** — está
+  verificado en las reglas, no en la interfaz. Eso permite repartir roles desde
+  la app, sin scripts.
 
-El alumno no lleva la institución en el claim: la eligió él al registrarse y vive
-en su documento. No hace falta protegerla con un claim porque no le da acceso a
-nada por sí sola — la cuenta pasa igual por la aprobación de una persona.
+Un rol solo vale si además la cuenta está en estado `activo`: suspender a
+alguien le saca los permisos en el acto.
 
-Cuando se le cambia el rol a alguien, **tiene que cerrar sesión y volver a
-entrar**: el token con los claims se emite al iniciar sesión.
+**Un cambio de rol se aplica al instante**, sin cerrar sesión. La única
+excepción es `superadmin`, porque el claim se emite al iniciar sesión.
 
----
+El primer superadmin se crea con el script:
+
+```bash
+node scripts/asignar-rol.js tucorreo@ejemplo.com superadmin
+```
+
+## Lo que puede hacer el superadmin desde la app
+
+- **Registrar una institución nueva**: elige departamento, nombre, ciudad, hora
+  de apertura e identificador. Queda activa y recibiendo registros al instante.
+- **Configurar cada institución**: permisos del admin, precios, activarla o
+  desactivarla.
+- **Administrar los usuarios de cada institución**: crear, editar, asignar rol y
+  estado, y eliminar.
+
+Crear un usuario desde el panel no cierra la sesión de quien lo crea: la cuenta
+se da de alta con una instancia secundaria de Firebase, descartable.
+
+> **Al eliminar un usuario se borra su ficha, no su cuenta de correo.** El SDK
+> del celular solo puede borrar la cuenta de quien está logueado. La ficha es lo
+> que da acceso, así que la persona queda afuera igual, pero el correo sigue
+> ocupado. Para liberarlo:
+>
+> ```bash
+> node scripts/limpiar-cuentas.js            # lista lo que borraría
+> node scripts/limpiar-cuentas.js --borrar   # borra
+> ```
+
+## Mi perfil y modo oscuro
+
+El avatar de arriba a la derecha abre un menú con **Mi perfil** y **Cerrar
+sesión**, en todos los roles. Dentro de Mi perfil cada persona ve sus datos,
+cambia su foto y elige la apariencia: claro, oscuro o como el celular.
+
+Los datos personales son de solo lectura: fueron verificados al aprobar el
+registro, así que los edita la administración. Lo único que cada uno se puede
+cambiar a sí mismo es la foto — también verificado en las reglas.
+
+La foto se guarda **dentro del documento del usuario**, achicada a 256 px y
+comprimida, porque Firebase Storage exige plan de pago y el piloto corre en el
+gratuito. El modo oscuro se guarda en el celular, no en la cuenta.
 
 ## Limitaciones conocidas del piloto
 

@@ -8,9 +8,11 @@ import { Navegacion } from '../src/components/Navegacion';
 import { navegacionDe } from '../src/permisos';
 import { claveDeFecha, edadEnAnios } from '../src/fechas';
 import { NOMBRE_COMIDA, comidaCentral, desayunoVisible } from '../src/comedor';
-import { colores, espaciado, radio, tipografia } from '../src/theme';
+import { espaciado, radio, tipografia } from '../src/theme';
+import { useEstilos, useTema } from '../src/contexts/TemaContext';
 
 function Contador({ titulo, valor, tamanio = 'grande', color }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={[estilos.contador, tamanio === 'chico' && estilos.contadorChico]}>
       <Text style={[estilos.contadorTitulo, tamanio === 'chico' && estilos.contadorTituloChico]}>
@@ -30,6 +32,8 @@ function Contador({ titulo, valor, tamanio = 'grande', color }) {
 }
 
 export default function PantallaDelComedor() {
+  const estilos = useEstilos(crearEstilos);
+  const { colores } = useTema();
   const { rol, institucionId, institucion } = useAuth();
   const [asistencias, setAsistencias] = useState(null);
   const [ahora, setAhora] = useState(() => new Date());
@@ -141,7 +145,8 @@ export default function PantallaDelComedor() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   tablero: { flex: 1, gap: espaciado.md, justifyContent: 'center' },
   fila: { flexDirection: 'row', gap: espaciado.md },
   contador: {
@@ -160,13 +165,13 @@ const estilos = StyleSheet.create({
   contadorValor: { fontSize: 56, fontWeight: '800', color: colores.texto },
   contadorValorChico: { fontSize: 34 },
   central: {
-    backgroundColor: colores.texto,
+    backgroundColor: colores.destacado,
     borderRadius: radio.lg,
     paddingVertical: espaciado.lg,
     alignItems: 'center',
     gap: espaciado.xs,
   },
-  centralTitulo: { fontSize: tipografia.subtitulo, color: '#ffffff', fontWeight: '600' },
-  centralValor: { fontSize: 104, lineHeight: 116, fontWeight: '800', color: '#ffffff' },
+  centralTitulo: { fontSize: tipografia.subtitulo, color: colores.destacadoTexto, fontWeight: '600' },
+  centralValor: { fontSize: 104, lineHeight: 116, fontWeight: '800', color: colores.destacadoTexto },
   pie: { fontSize: tipografia.nota, color: colores.textoSuave, textAlign: 'center' },
 });

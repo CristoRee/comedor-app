@@ -19,13 +19,15 @@ import { parsearFecha, formatoFecha } from '../../src/validaciones';
 import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
 import { permisoDelAdmin } from '../../src/permisos';
 import { CONCEPTOS, cobroDe, formatearMonto } from '../../src/precios';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 function finDelMes(referencia = new Date()) {
   return new Date(referencia.getFullYear(), referencia.getMonth() + 1, 0, 23, 59, 59);
 }
 
 function Dato({ etiqueta, valor }) {
+  const estilos = useEstilos(crearEstilos);
   return (
     <View style={estilos.dato}>
       <Text style={estilos.datoEtiqueta}>{etiqueta}</Text>
@@ -35,6 +37,7 @@ function Dato({ etiqueta, valor }) {
 }
 
 export default function FichaDelAlumno() {
+  const estilos = useEstilos(crearEstilos);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { usuario, institucionId, institucion } = useAuth();
@@ -370,7 +373,8 @@ export default function FichaDelAlumno() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   volver: { fontSize: tipografia.cuerpo, color: colores.primario, fontWeight: '600' },
   nombre: { fontSize: tipografia.titulo - 4, fontWeight: '700', color: colores.texto },
   tarjeta: {

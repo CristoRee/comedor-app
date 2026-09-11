@@ -3,12 +3,14 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../src/firebase';
-import { Aviso, Cargando, Pantalla } from '../../src/components/ui';
+import { Aviso, Boton, Cargando, Pantalla } from '../../src/components/ui';
 import { Encabezado } from '../../src/components/Encabezado';
 import { PERMISOS_DEL_ADMIN, permisoDelAdmin } from '../../src/permisos';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 export default function CatalogoInstituciones() {
+  const estilos = useEstilos(crearEstilos);
   const router = useRouter();
   const [instituciones, setInstituciones] = useState(null);
   const [error, setError] = useState(null);
@@ -48,6 +50,8 @@ export default function CatalogoInstituciones() {
         subtitulo="Catálogo nacional"
         nota={`${activas} activas de ${instituciones.length}`}
       />
+
+      <Boton titulo="Registrar institución" onPress={() => router.push('/superadmin/nueva')} />
 
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
 
@@ -99,7 +103,8 @@ export default function CatalogoInstituciones() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.sm, paddingBottom: espaciado.lg },
   fila: {
@@ -112,7 +117,7 @@ const estilos = StyleSheet.create({
     borderColor: colores.borde,
     padding: espaciado.md,
   },
-  filaPresionada: { backgroundColor: '#eef2f7' },
+  filaPresionada: { backgroundColor: colores.presionado },
   filaTextos: { flex: 1, gap: 2 },
   nombre: { fontSize: tipografia.subtitulo, fontWeight: '700', color: colores.texto },
   detalle: { fontSize: tipografia.nota, color: colores.textoSuave },

@@ -16,7 +16,8 @@ import {
   normalizarPrecio,
   precioDe,
 } from '../../src/precios';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const CAMPOS_DE_PRECIO = CONCEPTOS.map((concepto) => ({
   clave: concepto.clavePrecio,
@@ -30,6 +31,7 @@ function textoDePrecio(institucion, clave) {
 }
 
 export default function RegistroDePagos() {
+  const estilos = useEstilos(crearEstilos);
   const { usuarioId, usuarioNombre } = useLocalSearchParams();
   const router = useRouter();
   const { rol, institucionId, institucion } = useAuth();
@@ -232,11 +234,12 @@ export default function RegistroDePagos() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.sm, paddingBottom: espaciado.lg },
   panel: {
-    backgroundColor: '#eef1f5',
+    backgroundColor: colores.superficieAlterna,
     borderRadius: radio.lg,
     padding: espaciado.md,
     gap: espaciado.md,

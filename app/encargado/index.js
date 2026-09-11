@@ -11,7 +11,8 @@ import { navegacionDe } from '../../src/permisos';
 import { claveDeFecha, horaCorta } from '../../src/fechas';
 import { idAsistencia } from '../../src/comedor';
 import { evaluarAcceso } from '../../src/acceso';
-import { colores, espaciado, radio, tipografia } from '../../src/theme';
+import { FIJOS, espaciado, radio, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const NOMBRE_MEDIO = {
   ticket: 'Descontado 1 ticket',
@@ -22,6 +23,7 @@ const NOMBRE_MEDIO = {
 class RechazoDeAcceso extends Error {}
 
 export default function Escaner() {
+  const estilos = useEstilos(crearEstilos);
   const { usuario, perfil, rol, institucionId, institucion } = useAuth();
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [resultado, setResultado] = useState(null);
@@ -192,7 +194,8 @@ export default function Escaner() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   visor: {
     flex: 1,
     borderRadius: radio.lg,
@@ -207,23 +210,23 @@ const estilos = StyleSheet.create({
     padding: espaciado.lg,
     gap: espaciado.sm,
   },
-  resultadoOk: { backgroundColor: colores.exito },
-  resultadoMal: { backgroundColor: colores.error },
-  simbolo: { fontSize: 96, color: '#ffffff', fontWeight: '700' },
+  resultadoOk: { backgroundColor: FIJOS.escanerOk },
+  resultadoMal: { backgroundColor: FIJOS.escanerMal },
+  simbolo: { fontSize: 96, color: FIJOS.escanerTexto, fontWeight: '700' },
   resultadoTitulo: {
     fontSize: 26,
-    color: '#ffffff',
+    color: FIJOS.escanerTexto,
     fontWeight: '700',
     textAlign: 'center',
   },
   resultadoDetalle: {
     fontSize: tipografia.subtitulo,
-    color: '#ffffff',
+    color: FIJOS.escanerTexto,
     textAlign: 'center',
   },
   tocar: {
     fontSize: tipografia.nota,
-    color: '#ffffff',
+    color: FIJOS.escanerTexto,
     opacity: 0.85,
     marginTop: espaciado.md,
   },

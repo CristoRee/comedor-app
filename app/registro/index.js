@@ -3,8 +3,10 @@ import { useRouter } from 'expo-router';
 import departamentos from '../../src/departamentos.json';
 import { Opcion, Pantalla, Subtitulo, Titulo } from '../../src/components/ui';
 import { espaciado } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 export default function ElegirDepartamento() {
+  const estilos = useEstilos(crearEstilos);
   const router = useRouter();
 
   return (
@@ -31,7 +33,8 @@ export default function ElegirDepartamento() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   flex: { flex: 1 },
   lista: { gap: espaciado.sm, paddingBottom: espaciado.lg },
 });

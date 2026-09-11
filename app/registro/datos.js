@@ -20,7 +20,8 @@ import {
   validarNombre,
   validarTelefono,
 } from '../../src/validaciones';
-import { colores, espaciado, tipografia } from '../../src/theme';
+import { espaciado, tipografia } from '../../src/theme';
+import { useEstilos } from '../../src/contexts/TemaContext';
 
 const CAMPOS_VACIOS = {
   nombre: '',
@@ -34,6 +35,7 @@ const CAMPOS_VACIOS = {
 };
 
 export default function DatosDelRegistro() {
+  const estilos = useEstilos(crearEstilos);
   const { institucionId, institucionNombre } = useLocalSearchParams();
   const [datos, setDatos] = useState(CAMPOS_VACIOS);
   const [errores, setErrores] = useState({});
@@ -294,7 +296,8 @@ export default function DatosDelRegistro() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   encabezado: { gap: espaciado.sm, marginBottom: espaciado.xs },
   pie: { flexDirection: 'row', justifyContent: 'center', gap: espaciado.xs, marginTop: espaciado.sm },
   pieTexto: { fontSize: tipografia.nota + 1, color: colores.textoSuave },

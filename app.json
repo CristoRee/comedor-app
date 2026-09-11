@@ -31,6 +31,12 @@
         {
           "cameraPermission": "Mi Bandeja usa la cámara para leer el código del alumno al entrar al comedor."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mi Bandeja usa tus fotos solo para tu imagen de perfil."
+        }
       ]
     ]
   }

@@ -39,3 +39,22 @@ try {
 }
 
 export const db = dbInstance;
+
+// Crear una cuenta desde un panel no debe cerrar la sesión de quien la crea: el
+// SDK deja logueado al último usuario creado. Por eso se usa una instancia
+// secundaria y desechable, que además no persiste sesión.
+export async function crearCuentaSinIniciarSesion(email, contrasenia) {
+  const { initializeApp: iniciar, deleteApp } = await import('firebase/app');
+  const { getAuth, createUserWithEmailAndPassword, signOut } = await import('firebase/auth');
+
+  const secundaria = iniciar(firebaseConfig, `alta-${Date.now()}`);
+
+  try {
+    const authSecundaria = getAuth(secundaria);
+    const { user } = await createUserWithEmailAndPassword(authSecundaria, email, contrasenia);
+    await signOut(authSecundaria).catch(() => {});
+    return user.uid;
+  } finally {
+    await deleteApp(secundaria).catch(() => {});
+  }
+}

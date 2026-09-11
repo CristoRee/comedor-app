@@ -4,15 +4,15 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { Cargando } from '../src/components/ui';
-import { colores } from '../src/theme';
+import { TemaProvider, useTema } from '../src/contexts/TemaContext';
 
 // La primera sección de cada lista es la pantalla de arranque del rol.
 const SECCIONES_POR_ROL = {
-  alumno: ['alumno'],
-  cocinero: ['cocinero', 'comedor'],
-  encargado: ['encargado', 'comedor'],
-  admin: ['admin', 'alumnos', 'pagos', 'comedor'],
-  superadmin: ['superadmin'],
+  alumno: ['alumno', 'perfil'],
+  cocinero: ['cocinero', 'comedor', 'perfil'],
+  encargado: ['encargado', 'comedor', 'perfil'],
+  admin: ['admin', 'alumnos', 'pagos', 'comedor', 'perfil'],
+  superadmin: ['superadmin', 'perfil'],
 };
 
 const RUTAS_SIN_SESION = ['login', 'registro'];
@@ -54,20 +54,30 @@ function Guardia({ children }) {
   return children;
 }
 
+function Aplicacion() {
+  const { colores, esOscuro } = useTema();
+
+  return (
+    <AuthProvider>
+      <StatusBar style={esOscuro ? 'light' : 'dark'} />
+      <Guardia>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colores.fondo },
+          }}
+        />
+      </Guardia>
+    </AuthProvider>
+  );
+}
+
 export default function LayoutRaiz() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <Guardia>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colores.fondo },
-            }}
-          />
-        </Guardia>
-      </AuthProvider>
+      <TemaProvider>
+        <Aplicacion />
+      </TemaProvider>
     </SafeAreaProvider>
   );
 }

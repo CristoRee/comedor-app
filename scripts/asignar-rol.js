@@ -40,16 +40,22 @@ async function asignar() {
   }
 
   const usuario = await getAuth().getUserByEmail(correo);
-  const claims = rol === 'superadmin' ? { rol } : { rol, institucionId };
 
-  await getAuth().setCustomUserClaims(usuario.uid, claims);
+  // El claim se usa solo para 'superadmin': es el único rol que no se puede
+  // repartir desde la app, y por eso vive donde la app no puede escribir. Los
+  // demás roles los lee la app del documento, y los cambia el superadmin.
+  await getAuth().setCustomUserClaims(usuario.uid, rol === 'superadmin' ? { rol } : null);
   await firestore
     .collection('usuarios')
     .doc(usuario.uid)
     .set({ rol, estado: 'activo', ...(institucionId ? { institucionId } : {}) }, { merge: true });
 
   console.log(`${correo}: rol ${rol}${institucionId ? ` en ${institucionId}` : ''} (uid ${usuario.uid}).`);
-  console.log('El usuario debe cerrar sesión y volver a entrar para que el token tome el rol.');
+  if (rol === 'superadmin') {
+    console.log('Debe cerrar sesión y volver a entrar: el claim se emite al iniciar sesión.');
+  } else {
+    console.log('El cambio se aplica en el acto, sin cerrar sesión.');
+  }
 }
 
 asignar().catch((error) => {

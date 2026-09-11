@@ -5,9 +5,11 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../src/firebase';
 import { Aviso, Boton, Campo, Pantalla, Subtitulo, Titulo } from '../src/components/ui';
 import { formatoCorreo, mensajeDeError, validarCorreo } from '../src/validaciones';
-import { colores, espaciado, tipografia } from '../src/theme';
+import { espaciado, tipografia } from '../src/theme';
+import { useEstilos } from '../src/contexts/TemaContext';
 
 export default function Login() {
+  const estilos = useEstilos(crearEstilos);
   const [correo, setCorreo] = useState('');
   const [contrasenia, setContrasenia] = useState('');
   const [errores, setErrores] = useState({});
@@ -96,7 +98,8 @@ export default function Login() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores) =>
+  StyleSheet.create({
   contenido: { justifyContent: 'center' },
   encabezado: { marginBottom: espaciado.md, gap: espaciado.sm },
   pie: { flexDirection: 'row', justifyContent: 'center', gap: espaciado.xs, marginTop: espaciado.sm },
