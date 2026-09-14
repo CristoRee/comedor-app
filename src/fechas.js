@@ -46,3 +46,12 @@ export function edadEnAnios(fechaNacimiento, referencia = new Date()) {
 
   return edad;
 }
+
+// Las asistencias guardan la fecha como 'aaaa-mm-dd' para poder ordenarlas y
+// compararlas como texto. Para mostrarla se da vuelta.
+export function claveLegible(clave) {
+  if (typeof clave !== 'string') return '—';
+
+  const [anio, mes, dia] = clave.split('-');
+  return anio && mes && dia ? `${dia}/${mes}/${anio}` : clave;
+}

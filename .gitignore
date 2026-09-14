@@ -42,3 +42,8 @@ yarn-error.*
 
 # credenciales del Admin SDK — NUNCA subir
 scripts/service-account.json
+
+# configuración local del asistente de código — no forma parte del proyecto
+.claude/
+CLAUDE.md
+AGENTS.md

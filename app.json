@@ -29,7 +29,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Mi Bandeja usa la cámara para leer el código del alumno al entrar al comedor."
+          "cameraPermission": "Mi Bandeja usa la cámara para leer el código del alumno al entrar al comedor.",
+          "microphonePermission": "Mi Bandeja no usa el micrófono; este permiso lo exige el sistema de cámara aunque nunca se active.",
+          "recordAudioAndroid": false
         }
       ],
       [
@@ -37,7 +39,30 @@
         {
           "photosPermission": "Mi Bandeja usa tus fotos solo para tu imagen de perfil."
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#e6f4fe",
+          "dark": {
+            "backgroundColor": "#101217"
+          }
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e4d4af36-5781-4679-b8a2-a32e6562f7a5"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e4d4af36-5781-4679-b8a2-a32e6562f7a5"
+    }
   }
 }

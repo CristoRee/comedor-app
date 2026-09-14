@@ -60,7 +60,14 @@ export default function MiPerfil() {
     setSubiendo(true);
 
     try {
-      const contexto = ImageManipulator.manipulate(elegida.assets[0].uri);
+      const activo = elegida.assets[0];
+
+      const lado = Math.min(activo.width, activo.height);
+      const origenX = Math.round((activo.width - lado) / 2);
+      const origenY = Math.round((activo.height - lado) / 2);
+
+      const contexto = ImageManipulator.manipulate(activo.uri);
+      contexto.crop({ originX: origenX, originY: origenY, width: lado, height: lado });
       contexto.resize({ width: LADO_MAXIMO, height: LADO_MAXIMO });
 
       const imagen = await contexto.renderAsync();

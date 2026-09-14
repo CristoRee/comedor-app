@@ -11,16 +11,16 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { db } from '../../src/firebase';
-import { useAuth } from '../../src/contexts/AuthContext';
-import { Aviso, Boton, Campo, Cargando, Pantalla } from '../../src/components/ui';
-import { fechaCorta } from '../../src/fechas';
-import { parsearFecha, formatoFecha } from '../../src/validaciones';
-import { evaluarAcceso, resumenDeAcceso } from '../../src/acceso';
-import { permisoDelAdmin } from '../../src/permisos';
-import { CONCEPTOS, cobroDe, formatearMonto } from '../../src/precios';
-import { espaciado, radio, tipografia } from '../../src/theme';
-import { useEstilos } from '../../src/contexts/TemaContext';
+import { db } from '../../../src/firebase';
+import { useAuth } from '../../../src/contexts/AuthContext';
+import { Aviso, Boton, Campo, Cargando, Pantalla } from '../../../src/components/ui';
+import { fechaCorta } from '../../../src/fechas';
+import { parsearFecha, formatoFecha } from '../../../src/validaciones';
+import { evaluarAcceso, resumenDeAcceso } from '../../../src/acceso';
+import { permisoDelAdmin } from '../../../src/permisos';
+import { CONCEPTOS, cobroDe, formatearMonto } from '../../../src/precios';
+import { espaciado, radio, tipografia } from '../../../src/theme';
+import { useEstilos } from '../../../src/contexts/TemaContext';
 
 function finDelMes(referencia = new Date()) {
   return new Date(referencia.getFullYear(), referencia.getMonth() + 1, 0, 23, 59, 59);
@@ -306,6 +306,17 @@ export default function FichaDelAlumno() {
           }
         />
       ) : null}
+
+      <Boton
+        titulo="Ver historial de asistencias"
+        variante="secundario"
+        onPress={() =>
+          router.push({
+            pathname: `/alumnos/${id}/asistencias`,
+            params: { nombre: `${alumno.nombre} ${alumno.apellido}` },
+          })
+        }
+      />
 
       <Text style={estilos.seccion}>Beca del comedor</Text>
 
